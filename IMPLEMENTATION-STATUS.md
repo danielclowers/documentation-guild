@@ -9,7 +9,7 @@
 | 4. Guild Business | Seed catalog validated. Challenge play and reward persistence pending. |
 | 5. Cooperative expeditions | Pending. |
 | 6. Story, content and polish | Story seed validated. Campaign play and journal pending. |
-| 7. Deployment and operations | GitHub source repository created. Pages is blocked by the account plan for private repositories. Cloudflare deployment is pending. |
+| 7. Deployment and operations | Static welcome screen is live on GitHub Pages. Cloudflare deployment is pending. |
 
 The attached workspace serves as the project directory. `docs/spec` contains the unchanged handoff and a single copy of the JSON catalog. The checked-in catalog names use `advanced` for harder content and `normal` for standard expeditions.
 
@@ -22,4 +22,4 @@ The GitHub CLI and SSH both verified `danielclowers`. The project repository is 
 - `pnpm test:e2e` passed in desktop and mobile Chromium profiles at `/documentation-guild/`, including a check that Phaser rendered the hall pixels. The test used the installed Chromium and a prestarted loopback preview.
 - All nine archived files matched the copies in `docs/spec` byte for byte. A search of the built frontend found no catalog markers or sample puzzle data.
 
-GitHub returned HTTP 422 when enabling Pages on the private repository: “Your current plan does not support GitHub Pages for this repository.” The Pages workflow is ready to use once an eligible publishing source is available.
+The public GitHub repository uses GitHub Actions as its Pages source. The workflow publishes the static welcome screen from `main`. The deployed HTML, JavaScript entry point, and stylesheet returned HTTP 200. [Live welcome screen](https://danielclowers.github.io/documentation-guild/)
