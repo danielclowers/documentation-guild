@@ -16,3 +16,7 @@ If a revoked or expired invite leaves a Clerk user without membership, confirm t
 ## Shared hall
 
 The roster includes authenticated members who have a current hall connection. Multiple tabs share one avatar. A 20-second heartbeat tracks connections, and a socket expires after 60 seconds without a heartbeat. Membership is rechecked periodically and suspension closes the member's sockets. When deploying the hall, apply D1 migration `0004_hall_presence.sql` and keep the `hall-v1` Durable Object migration in the Worker config. [Hosted API health](https://documentation-guild-preview.guild-api.workers.dev/health)
+
+## Standing orders
+
+Members start a standing order from the character panel. One complete five-minute cycle pays character XP, XP in the selected skill and gold. Switching settles the old order before changing stations. Each skill retains its unfinished cycle. The server caps disconnected earning time at 24 hours and records each payout in the reward ledger. Apply `0005_standing_orders.sql` before deploying a Worker that uses this feature.

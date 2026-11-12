@@ -1,10 +1,11 @@
 import { ClerkProvider, useAuth, useClerk, useSignIn } from '@clerk/react';
 import { characterSchema, passwordSchema, usernameSchema } from '@guild/shared';
 import type { GuildProfile } from '@guild/shared';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { accountApi, accountError, GuildApiError } from './api';
 import { AdminPanel } from './admin';
+import { StandingOrders } from './standing-orders';
 import { PasswordSettings, RecoveryForm } from './password';
 import { LiveHall } from '../hall/live-hall';
 import { AvatarPreview, CharacterFields, startingAppearance } from './character';
@@ -161,6 +162,11 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
   const { signOut } = useClerk();
   const request = useMemo(() => accountApi(apiUrl, getToken), [apiUrl, getToken]);
   const [profile, setProfile] = useState<GuildProfile>();
+  const progressVersion = useRef(0);
+  function updateProgress(next: GuildProfile) {
+    progressVersion.current++;
+    setProfile(next);
+  }
   const [appearance, setAppearance] = useState(startingAppearance);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState('');
@@ -181,6 +187,40 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
     return () => controller.abort();
   }, [isSignedIn, request, revision]);
 
+  useEffect(() => {
+    if (!isSignedIn || !profile?.character) return;
+    let pending = false;
+    const controller = new AbortController();
+    const refresh = async () => {
+      if (pending || document.hidden) return;
+      pending = true;
+      const version = progressVersion.current;
+      try {
+        const next = await request<GuildProfile>('/me', { signal: controller.signal });
+        if (!controller.signal.aborted && version === progressVersion.current) setProfile(next);
+      } catch (err) {
+        if (
+          !controller.signal.aborted &&
+          err instanceof GuildApiError &&
+          ['UNAUTHORIZED', 'NOT_MEMBER'].includes(err.code)
+        ) {
+          setError(accountError(err));
+          setProfile(undefined);
+        }
+      } finally {
+        pending = false;
+      }
+    };
+    const timer = window.setInterval(() => void refresh(), 30_000);
+    const onVisible = () => void refresh();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [isSignedIn, Boolean(profile?.character), request]);
+
   async function save(event: FormEvent) {
     event.preventDefault();
     setError('');
@@ -197,7 +237,7 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
         method: 'PATCH',
         body: JSON.stringify(validated.data),
       });
-      setProfile(data);
+      updateProgress(data);
       setEditing(false);
     } catch (err) {
       setError(accountError(err));
@@ -261,7 +301,7 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
           <div className="profile-summary">
             <AvatarPreview appearance={character} />
             <p>
-              Level {character.level} · {character.gold} gold
+              Level {character.level} · {character.xp} XP · {character.gold} gold
             </p>
             <button
               type="button"
@@ -274,6 +314,9 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
               Edit character
             </button>
           </div>
+        )}
+        {character && (
+          <StandingOrders character={character} request={request} onChange={updateProgress} />
         )}
         {profile && <PasswordSettings />}
         {profile?.role === 'admin' && <AdminPanel request={request} />}

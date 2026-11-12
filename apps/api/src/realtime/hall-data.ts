@@ -1,6 +1,7 @@
 import type { D1Database, DurableObjectNamespace } from '@cloudflare/workers-types';
 import { characterLevel } from '@guild/shared';
-import type { HallMember } from '@guild/shared';
+import type { HallMember, Skill } from '@guild/shared';
+import { settleStandingOrder } from '../progression/standing-orders';
 
 export type HallCharacter = Omit<HallMember, 'presence' | 'arrivalAt' | 'slot'>;
 export interface HallBindings {
@@ -33,4 +34,14 @@ export async function notifyHall(env: HallBindings, memberId: string, revoked = 
     method: 'POST',
     body: JSON.stringify({ memberId, revoked }),
   });
+}
+
+export async function settleGuildMember(env: HallBindings, memberId: string, skill?: Skill) {
+  const room = guildRoom(env);
+  if (!room) return settleStandingOrder(env.DB, memberId, { skill });
+  const response = await room.fetch('https://guild-room.internal/settle', {
+    method: 'POST',
+    body: JSON.stringify({ memberId, skill }),
+  });
+  if (!response.ok) throw new Error('Standing order settlement unavailable');
 }

@@ -5,6 +5,7 @@ import {
   inviteTokenSchema,
   hallStations,
   passwordSchema,
+  skillSchema,
   usernameSchema,
 } from '@guild/shared';
 import type { GuildMember, GuildProfile, MemberRole } from '@guild/shared';
@@ -23,7 +24,8 @@ import {
   redeemInvitation,
 } from './invitations';
 
-import { guildRoom, notifyHall, type HallBindings } from '../realtime/hall-data';
+import { guildRoom, notifyHall, settleGuildMember, type HallBindings } from '../realtime/hall-data';
+import { characterProgression } from '../progression/standing-orders';
 
 interface Bindings extends ClerkBindings, HallBindings {
   WEB_URL?: string;
@@ -88,11 +90,15 @@ async function getProfile(db: D1Database, member: Membership): Promise<GuildProf
     hair_color AS hairColor, tunic_color AS tunicColor, total_xp AS xp, gold FROM characters WHERE member_id = ?`,
     )
     .bind(member.id)
-    .first<NonNullable<GuildProfile['character']>>();
+    .first<Omit<NonNullable<GuildProfile['character']>, 'level' | 'progression'>>();
   return {
     memberId: member.id,
     role: member.role,
-    character: character && { ...character, level: characterLevel(character.xp) },
+    character: character && {
+      ...character,
+      level: characterLevel(character.xp),
+      progression: await characterProgression(db, character.id),
+    },
   };
 }
 
@@ -272,7 +278,17 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
     return c.body(null, 204);
   });
 
-  members.get('/me', async (c) => c.json(await getProfile(c.env.DB, c.var.member)));
+  members.get('/me', async (c) => {
+    await settleGuildMember(c.env, c.var.member.id);
+    return c.json(await getProfile(c.env.DB, c.var.member));
+  });
+
+  members.put('/me/standing-order', async (c) => {
+    const input = await parseBody(c, z.strictObject({ skill: skillSchema }));
+    if (!input) return c.json({ error: { code: 'INVALID_INPUT' } }, 400);
+    await settleGuildMember(c.env, c.var.member.id, input.skill);
+    return c.json(await getProfile(c.env.DB, c.var.member));
+  });
   members.patch('/me/character', async (c) => {
     const input = await parseBody(c, characterSchema);
     if (!input) return c.json({ error: { code: 'INVALID_INPUT' } }, 400);

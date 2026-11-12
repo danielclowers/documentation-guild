@@ -76,7 +76,7 @@ beforeAll(async () => {
     const sql = await readFile(join(migrations, file), 'utf8');
     await db.batch(
       sql
-        .split(';')
+        .split(/;[ \t]*\n+(?=(?:CREATE|ALTER|INSERT)\b)/)
         .map((statement) => statement.trim())
         .filter(Boolean)
         .map((statement) => db.prepare(statement)),

@@ -398,3 +398,26 @@ h1 {
     grid-row: 1;
   }
 }
+
+.standing-orders {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid #665039;
+  padding-top: 12px;
+}
+.standing-orders h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #e1b776;
+}
+.standing-orders label,
+.standing-orders p,
+.standing-orders li {
+  font-size: 0.88rem;
+}
+.standing-orders ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  color: #dfcbb1;
+}

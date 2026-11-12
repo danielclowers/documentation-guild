@@ -6,6 +6,8 @@ import { clerkIdentity, CredentialsRejected } from '../../apps/api/src/accounts/
 import type { IdentityProvider, ProvisionedUser } from '../../apps/api/src/accounts/identity';
 import { hashInvite, type invitationState } from '../../apps/api/src/accounts/invitations';
 import { accountRoutes } from '../../apps/api/src/accounts/routes';
+import { settleStandingOrder } from '../../apps/api/src/progression/standing-orders';
+import { offlineStandingOrderLimit, standingOrderInterval } from '../../packages/shared/src';
 
 const origin = 'http://localhost:5173';
 const issuer = 'https://guild.example.test';
@@ -109,6 +111,8 @@ beforeAll(async () => {
     '0001_guild_membership.sql',
     '0002_invitation_leases.sql',
     '0003_account_recovery.sql',
+    '0004_hall_presence.sql',
+    '0005_standing_orders.sql',
   ]) {
     const sql = await readFile(
       new URL(`../../apps/api/migrations/${migration}`, import.meta.url),
@@ -116,7 +120,7 @@ beforeAll(async () => {
     );
     await db.batch(
       sql
-        .split(';')
+        .split(/;[ \t]*\n+(?=(?:CREATE|ALTER|INSERT)\b)/)
         .map((statement) => statement.trim())
         .filter(Boolean)
         .map((statement) => db.prepare(statement)),
@@ -138,9 +142,16 @@ beforeEach(async () => {
     return user;
   });
   await db.batch(
-    ['account_recovery', 'audit_log', 'invitations', 'characters', 'members'].map((table) =>
-      db.prepare(`DELETE FROM ${table}`),
-    ),
+    [
+      'reward_ledger',
+      'character_skills',
+      'standing_orders',
+      'account_recovery',
+      'audit_log',
+      'invitations',
+      'characters',
+      'members',
+    ].map((table) => db.prepare(`DELETE FROM ${table}`)),
   );
   await db
     .prepare(
@@ -311,4 +322,96 @@ describe('guild accounts with local D1 and signed test identities', () => {
       await hashInvite(token),
     );
   });
+});
+
+async function progressionMember() {
+  const invite = await createInvitation();
+  expect((await redeem(invite.token)).status).toBe(201);
+  const auth = tokenFor('user_redeemed');
+  const read = async () =>
+    (await (
+      await call('/me', { auth })
+    ).json()) as import('../../packages/shared/src').GuildProfile;
+  const profile = await read();
+  return { auth, read, memberId: profile.memberId };
+}
+
+it('settles one payout across concurrent requests and carries each skill’s partial cycle through switches', async () => {
+  const { auth, read, memberId } = await progressionMember();
+  const choose = (skill: string) =>
+    call('/me/standing-order', { method: 'PUT', auth, body: { skill } });
+  expect((await choose('Unknown')).status).toBe(400);
+  const response = await choose('Scribing');
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({
+    character: { xp: 0, gold: 0, progression: { order: { skill: 'Scribing' } } },
+  });
+  const start = await db
+    .prepare('SELECT accounted_at FROM standing_orders')
+    .first<number>('accounted_at');
+  if (start === null) throw new Error('Missing standing order');
+  const tick = standingOrderInterval;
+  await Promise.all(
+    Array.from({ length: 5 }, () =>
+      settleStandingOrder(db, memberId, { now: start + tick, connectedSince: start }),
+    ),
+  );
+  expect(await db.prepare('SELECT COUNT(*) AS count FROM reward_ledger').first('count')).toBe(1);
+  await settleStandingOrder(db, memberId, {
+    now: start + 1.5 * tick,
+    connectedSince: start,
+    skill: 'Research',
+  });
+  expect(await db.prepare('SELECT hall_station FROM characters').first('hall_station')).toBe(
+    'Archives',
+  );
+  await settleStandingOrder(db, memberId, {
+    now: start + 2.5 * tick,
+    connectedSince: start,
+    skill: 'Scribing',
+  });
+  await settleStandingOrder(db, memberId, { now: start + 3 * tick, connectedSince: start });
+  expect(await read()).toMatchObject({
+    character: {
+      xp: 9,
+      gold: 8,
+      progression: {
+        skills: { Scribing: { xp: 10 }, Research: { xp: 5 }, Restoration: { xp: 0 } },
+      },
+    },
+  });
+});
+
+it('caps a seven-day absence across repeated settlements, then credits connected time', async () => {
+  const { memberId } = await progressionMember();
+  const start = Date.now() - 7 * offlineStandingOrderLimit;
+  await settleStandingOrder(db, memberId, { now: start, skill: 'Restoration' });
+  await settleStandingOrder(db, memberId, { now: start + offlineStandingOrderLimit / 2 });
+  await settleStandingOrder(db, memberId, { now: start + 5 * offlineStandingOrderLimit });
+  const returnAt = start + 7 * offlineStandingOrderLimit;
+  await settleStandingOrder(db, memberId, { now: returnAt, connectedSince: returnAt });
+  expect(await db.prepare('SELECT gold, total_xp FROM characters').first()).toEqual({
+    gold: 576,
+    total_xp: 864,
+  });
+  await settleStandingOrder(db, memberId, {
+    now: returnAt + standingOrderInterval,
+    connectedSince: returnAt,
+  });
+  expect(await db.prepare('SELECT gold, total_xp FROM characters').first()).toEqual({
+    gold: 578,
+    total_xp: 867,
+  });
+  expect(await db.prepare('SELECT xp FROM character_skills').first('xp')).toBe(1445);
+});
+
+it('does not apply the offline cap to continuous hall presence', async () => {
+  const { memberId } = await progressionMember();
+  const start = Date.now() - 2 * offlineStandingOrderLimit;
+  await settleStandingOrder(db, memberId, { now: start, skill: 'Scribing' });
+  await settleStandingOrder(db, memberId, {
+    now: start + 2 * offlineStandingOrderLimit,
+    connectedSince: start,
+  });
+  expect(await db.prepare('SELECT total_xp FROM characters').first('total_xp')).toBe(1728);
 });

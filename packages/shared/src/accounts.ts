@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { CharacterProgression } from './progression';
 
 export const usernameSchema = z
   .string()
@@ -39,7 +40,15 @@ export type MemberRole = 'admin' | 'member';
 export interface GuildProfile {
   memberId: string;
   role: MemberRole;
-  character: (CharacterAppearance & { id: string; gold: number; xp: number; level: number }) | null;
+  character:
+    | (CharacterAppearance & {
+        id: string;
+        gold: number;
+        xp: number;
+        level: number;
+        progression: CharacterProgression;
+      })
+    | null;
 }
 
 export interface GuildInvitation {

@@ -5,7 +5,7 @@
 | 0. Verify and scaffold | Local workspace, welcome screen, initial D1 migration, content validation, test runners and CI/Pages workflows |
 | 1. Secure invitations and accounts | Invites, Clerk sign-in UI, profile setup, suspension and recovery implemented. D1 and token validation passed locally. The preview admin confirmed hosted sign-in and character creation. |
 | 2. Shared guild hall | Authenticated WebSocket roster, one avatar per member, station walks, waves and accessible roster available in the hosted preview. Expedition activity and standing-order production are later milestones. |
-| 3. Standing orders and progression | Level formulas added. Server accrual, training and specializations pending. |
+| 3. Standing orders and progression | Server-authoritative standing orders, character XP, three skill tracks and gold. Training, specializations and expedition pause/resume integration are pending. |
 | 4. Guild Business | Seed catalog validated. Challenge play and reward persistence pending. |
 | 5. Cooperative expeditions | Pending. |
 | 6. Story, content and polish | Story seed validated. Campaign play and journal pending. |
@@ -17,7 +17,7 @@ The GitHub CLI and SSH both verified `danielclowers`. The project repository is 
 
 ## Local verification
 
-- `pnpm check` passed lint, strict type checking, six unit tests, eight integration tests and the production build. The tests use signed local identities with the real Clerk token verifier and simulate provider account mutations. Vite reported that the lazy-loaded Phaser chunk exceeds its default size warning threshold.
+- `pnpm check` passed lint, strict type checking, six unit tests, eleven integration tests and the production build. The tests use signed local identities with the real Clerk token verifier and simulate provider account mutations. Vite reported that the lazy-loaded Phaser chunk exceeds its default size warning threshold.
 - Wrangler applied the hall migration to the hosted preview. The local integration tests also exercise the migrations in isolated D1. The running Worker returned HTTP 200 from `/health`. Smoke checks also covered CORS, anonymous denial and fail-closed behavior without provider configuration.
 - Four Playwright checks passed in desktop and mobile Chromium at `/documentation-guild/`. They verified that Phaser rendered the hall and that invitation and recovery links were cleared from the address bar. The tests used the installed Chromium and a prestarted loopback preview.
 - All nine archived files matched the copies in `docs/spec` byte for byte. A search of the built frontend found no catalog markers or sample puzzle data.

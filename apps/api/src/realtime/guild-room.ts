@@ -4,8 +4,9 @@ import type {
   Response as WorkerResponse,
   WebSocket as WorkerSocket,
 } from '@cloudflare/workers-types';
-import type { HallMember, HallMessage } from '@guild/shared';
+import type { HallMember, HallMessage, Skill } from '@guild/shared';
 import { hashInvite } from '../accounts/invitations';
+import { settleStandingOrder } from '../progression/standing-orders';
 import { hallCharacters, type HallBindings, type HallCharacter } from './hall-data';
 
 declare const WebSocketPair: typeof import('@cloudflare/workers-types').WebSocketPair;
@@ -94,6 +95,20 @@ export class GuildRoom {
 
   async fetch(request: Request): Promise<WorkerResponse> {
     const path = new URL(request.url).pathname;
+    if (path === '/settle' && request.method === 'POST') {
+      const { memberId, skill } = await request.json<{ memberId: string; skill?: Skill }>();
+      const now = Date.now();
+      const connectedSince = this.connections(now).find(
+        ([, data]) => data.character.id === memberId,
+      )?.[1].arrivalAt;
+      const changed = await settleStandingOrder(this.env.DB, memberId, {
+        now,
+        connectedSince,
+        skill,
+      });
+      if (changed && connectedSince !== undefined) await this.refresh([memberId]);
+      return new Response(null, { status: 204 }) as unknown as WorkerResponse;
+    }
     if (path === '/update' && request.method === 'POST') {
       const { memberId, revoked } = await request.json<{ memberId: string; revoked: boolean }>();
       await this.refresh([memberId], revoked);
@@ -111,10 +126,15 @@ export class GuildRoom {
     if (!ticket?.includes('guild-v1') || !token || !origin)
       return new Response(null, { status: 401 }) as unknown as WorkerResponse;
     const claimed = await this.claimTicket(token, origin);
+    const now = Date.now();
+    if (claimed) {
+      const since = this.connections(now).find(([, data]) => data.character.id === claimed.id)?.[1]
+        .arrivalAt;
+      await settleStandingOrder(this.env.DB, claimed.id, { now, connectedSince: since ?? now });
+    }
     const [character] = claimed ? await hallCharacters(this.env.DB, [claimed.id]) : [];
     if (!character) return new Response(null, { status: 401 }) as unknown as WorkerResponse;
 
-    const now = Date.now();
     const connections = this.connections(now);
     const existing = connections.filter(([, data]) => data.character.id === character.id);
     if (existing.length >= 6)
@@ -190,16 +210,23 @@ export class GuildRoom {
     socket.send('{"type":"pong"}');
   }
 
-  webSocketClose(socket: WorkerSocket) {
+  async webSocketClose(socket: WorkerSocket) {
     const now = Date.now();
+    const data = attachment(socket);
     const connections = this.connections(now).filter(([other]) => other !== socket);
     this.send(connections, { type: 'roster', members: this.roster(connections, now) });
+    if (data && !connections.some(([, other]) => other.character.id === data.character.id)) {
+      await settleStandingOrder(this.env.DB, data.character.id, {
+        now: Math.min(now, data.lastSeen + HEARTBEAT_TIMEOUT, data.authUntil),
+        connectedSince: data.arrivalAt,
+        checkpoint: true,
+      });
+    }
   }
 
-  webSocketError(socket: WorkerSocket) {
-    socket.serializeAttachment(null);
+  async webSocketError(socket: WorkerSocket) {
     socket.close(1011, 'Connection interrupted');
-    this.broadcastRoster();
+    await this.webSocketClose(socket);
   }
 
   private async refresh(ids: string[], revoked = false) {
@@ -224,9 +251,17 @@ export class GuildRoom {
 
   async alarm() {
     const now = Date.now();
-    const ids = [...new Set(this.connections(now).map(([, data]) => data.character.id))];
+    const members = new Map(
+      this.connections(now).map(([, data]) => [data.character.id, data.arrivalAt]),
+    );
+    const ids = [...members.keys()];
     if (!ids.length) return;
     await this.state.storage.setAlarm(now + REFRESH_INTERVAL);
+    await Promise.all(
+      [...members].map(([id, connectedSince]) =>
+        settleStandingOrder(this.env.DB, id, { now, connectedSince }),
+      ),
+    );
     await this.refresh(ids);
   }
 }
