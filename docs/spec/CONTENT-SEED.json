@@ -1,0 +1,1601 @@
+{
+  "schema_version": 1,
+  "game_title": "The Documentation Guild",
+  "campaign_title": "The Unwritten Chronicle",
+  "standing_orders": [
+    {
+      "key": "scribing",
+      "label": "Scribing",
+      "station": "Scriptorium",
+      "skill": "Scribing"
+    },
+    {
+      "key": "research",
+      "label": "Research",
+      "station": "Archives",
+      "skill": "Research"
+    },
+    {
+      "key": "restoration",
+      "label": "Restoration",
+      "station": "Restoration Table",
+      "skill": "Restoration"
+    }
+  ],
+  "business_cases": [
+    {
+      "key": "pages_in_order",
+      "title": "The Apprentice's First Mistake",
+      "type": "sequence",
+      "skill": "Scribing",
+      "prompt": "Arrange the numbered pages from lowest to highest.",
+      "difficulty": "intro",
+      "template": {
+        "initial": [
+          3,
+          1,
+          4,
+          2
+        ],
+        "answer": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "choice_effects": [],
+      "duration_seconds_target": 90
+    },
+    {
+      "key": "rune_numbers",
+      "title": "The Scrambled Incantation",
+      "type": "sequence",
+      "skill": "Research",
+      "prompt": "Place the four numbered runes in ascending order.",
+      "difficulty": "normal",
+      "template": {
+        "initial": [
+          4,
+          2,
+          1,
+          3
+        ],
+        "answer": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "choice_effects": [],
+      "duration_seconds_target": 90
+    },
+    {
+      "key": "three_witnesses",
+      "title": "Three Conflicting Witnesses",
+      "type": "deduction",
+      "skill": "Research",
+      "prompt": "The archivist says the door was locked at dusk. The guard says the key never left their belt. The baker says a window was open. Which route is supported by the clues?",
+      "difficulty": "normal",
+      "template": {
+        "initial": [
+          "front door",
+          "open window",
+          "locked cellar"
+        ],
+        "answer": "open window"
+      },
+      "choice_effects": [],
+      "duration_seconds_target": 90
+    },
+    {
+      "key": "ink_stains",
+      "title": "The Mysterious Ink Stains",
+      "type": "deduction",
+      "skill": "Restoration",
+      "prompt": "A page is stained at the bottom, and the shelf above it is dry. Rain entered through the east window. What most likely caused the stain?",
+      "difficulty": "normal",
+      "template": {
+        "initial": [
+          "leaking roof",
+          "windblown rain",
+          "spilled ink"
+        ],
+        "answer": "windblown rain"
+      },
+      "choice_effects": [],
+      "duration_seconds_target": 90
+    },
+    {
+      "key": "chronicle_priority",
+      "title": "A Very Important Footnote",
+      "type": "choice",
+      "skill": "Scribing",
+      "prompt": "An urgent footnote is missing from the archive; choose how to address it.",
+      "difficulty": "normal",
+      "template": {
+        "initial": [
+          "repair carefully",
+          "investigate origin",
+          "record a temporary note"
+        ],
+        "answer": null
+      },
+      "choice_effects": [
+        {
+          "key": "safe",
+          "kind": "guaranteed_gold",
+          "weight": 1
+        },
+        {
+          "key": "curious",
+          "kind": "discovery_roll",
+          "weight": 1
+        },
+        {
+          "key": "guild",
+          "kind": "renown_bonus",
+          "weight": 1
+        }
+      ],
+      "duration_seconds_target": 90
+    },
+    {
+      "key": "sealed_chest",
+      "title": "The Sealed Cabinet",
+      "type": "choice",
+      "skill": "Restoration",
+      "prompt": "A forgotten cabinet bears a damaged warning. How will you proceed?",
+      "difficulty": "normal",
+      "template": {
+        "initial": [
+          "restore seal",
+          "inspect inscription",
+          "ask the guild for guidance"
+        ],
+        "answer": null
+      },
+      "choice_effects": [
+        {
+          "key": "safe",
+          "kind": "guaranteed_gold",
+          "weight": 1
+        },
+        {
+          "key": "curious",
+          "kind": "discovery_roll",
+          "weight": 1
+        },
+        {
+          "key": "guild",
+          "kind": "renown_bonus",
+          "weight": 1
+        }
+      ],
+      "duration_seconds_target": 90
+    },
+    {
+      "key": "glyph_pairs",
+      "title": "The Mirrored Runes",
+      "type": "matching",
+      "skill": "Restoration",
+      "prompt": "Match the three pairs of mirrored runes.",
+      "difficulty": "normal",
+      "template": {
+        "initial": [
+          "sun",
+          "moon",
+          "star",
+          "moon",
+          "sun",
+          "star"
+        ],
+        "answer": [
+          "sun",
+          "moon",
+          "star"
+        ]
+      },
+      "choice_effects": [],
+      "duration_seconds_target": 90
+    },
+    {
+      "key": "bookmarks",
+      "title": "The Wandering Bookmarks",
+      "type": "matching",
+      "skill": "Scribing",
+      "prompt": "Match the book labels to their paired symbols.",
+      "difficulty": "normal",
+      "template": {
+        "initial": [
+          "leaf",
+          "quill",
+          "bell",
+          "bell",
+          "leaf",
+          "quill"
+        ],
+        "answer": [
+          "leaf",
+          "quill",
+          "bell"
+        ]
+      },
+      "choice_effects": [],
+      "duration_seconds_target": 90
+    },
+    {
+      "key": "first_revision",
+      "title": "Before the First Revision",
+      "type": "deduction",
+      "skill": "Research",
+      "prompt": "Draft A references a tower built last year. Draft B references its ruins. Draft C has no tower. Which draft is likeliest oldest?",
+      "difficulty": "advanced",
+      "template": {
+        "initial": [
+          "A",
+          "B",
+          "C"
+        ],
+        "answer": "C"
+      },
+      "choice_effects": [],
+      "duration_seconds_target": 90
+    },
+    {
+      "key": "repair_or_copy",
+      "title": "A Cracked Tablet",
+      "type": "choice",
+      "skill": "Restoration",
+      "prompt": "A stone tablet is crumbling. Choose to repair, copy, or research it.",
+      "difficulty": "normal",
+      "template": {
+        "initial": [
+          "repair it",
+          "copy what remains",
+          "study the damage"
+        ],
+        "answer": null
+      },
+      "choice_effects": [
+        {
+          "key": "safe",
+          "kind": "guaranteed_gold",
+          "weight": 1
+        },
+        {
+          "key": "curious",
+          "kind": "discovery_roll",
+          "weight": 1
+        },
+        {
+          "key": "guild",
+          "kind": "renown_bonus",
+          "weight": 1
+        }
+      ],
+      "duration_seconds_target": 90
+    },
+    {
+      "key": "page_five",
+      "title": "The Vanished Fifth Page",
+      "type": "sequence",
+      "skill": "Scribing",
+      "prompt": "Put five page markers in order to expose a hidden gap.",
+      "difficulty": "advanced",
+      "template": {
+        "initial": [
+          5,
+          2,
+          4,
+          1,
+          3
+        ],
+        "answer": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "choice_effects": [],
+      "duration_seconds_target": 90
+    },
+    {
+      "key": "scribe_memo",
+      "title": "A Note That Writes Back",
+      "type": "choice",
+      "skill": "Research",
+      "prompt": "A note changes whenever you blink. How should you respond?",
+      "difficulty": "normal",
+      "template": {
+        "initial": [
+          "observe carefully",
+          "make a duplicate",
+          "seal it for later"
+        ],
+        "answer": null
+      },
+      "choice_effects": [
+        {
+          "key": "safe",
+          "kind": "guaranteed_gold",
+          "weight": 1
+        },
+        {
+          "key": "curious",
+          "kind": "discovery_roll",
+          "weight": 1
+        },
+        {
+          "key": "guild",
+          "kind": "renown_bonus",
+          "weight": 1
+        }
+      ],
+      "duration_seconds_target": 90
+    }
+  ],
+  "expeditions": [
+    {
+      "key": "missing_pages",
+      "title": "The Missing Pages",
+      "summary": "A village librarian reports that several pages have vanished from the royal records, but their page numbers still make sense.",
+      "featured_skill": "Research",
+      "duration_minutes": 10,
+      "tier": "tutorial",
+      "recommended_level": 1,
+      "chapter": "chapter1",
+      "party_size": {
+        "min": 2,
+        "max": 4
+      },
+      "icon": "map",
+      "approaches": [
+        {
+          "key": "careful",
+          "label": "Careful investigation",
+          "strategy_bonus": 5,
+          "description": "Prioritize reliable evidence and steady bonuses."
+        },
+        {
+          "key": "curious",
+          "label": "Search the unknown",
+          "strategy_bonus": -5,
+          "description": "Pursue optional rare discoveries despite higher challenge."
+        },
+        {
+          "key": "supportive",
+          "label": "Document for the guild",
+          "strategy_bonus": 0,
+          "description": "Prioritize shared renown and a careful expedition log."
+        }
+      ],
+      "story_beats": {
+        "departure": "At the edge of the village, the librarian greets your party with a bundle of unnumbered pages.",
+        "midpoint": "The first recovered leaf bears a royal seal, but no mention of the event it records.",
+        "return": "Back at the hall, the recovered pages fit into the Chronicle without leaving a gap."
+      }
+    },
+    {
+      "key": "forgotten_archives",
+      "title": "The Forgotten Archives",
+      "summary": "Beneath the oldest library, an abandoned archive contains annotations written in a hand nobody recognizes.",
+      "featured_skill": "Research",
+      "duration_minutes": 20,
+      "tier": "normal",
+      "recommended_level": 2,
+      "chapter": "chapter1",
+      "party_size": {
+        "min": 2,
+        "max": 4
+      },
+      "icon": "map",
+      "approaches": [
+        {
+          "key": "careful",
+          "label": "Careful investigation",
+          "strategy_bonus": 5,
+          "description": "Prioritize reliable evidence and steady bonuses."
+        },
+        {
+          "key": "curious",
+          "label": "Search the unknown",
+          "strategy_bonus": -5,
+          "description": "Pursue optional rare discoveries despite higher challenge."
+        },
+        {
+          "key": "supportive",
+          "label": "Document for the guild",
+          "strategy_bonus": 0,
+          "description": "Prioritize shared renown and a careful expedition log."
+        }
+      ],
+      "story_beats": {
+        "departure": "A narrow staircase leads beneath the archive, where books are stacked in careful spirals.",
+        "midpoint": "Your party discovers a marginal note in an unfamiliar hand.",
+        "return": "The guild catalogues an annotation that should not have existed."
+      }
+    },
+    {
+      "key": "whispering_library",
+      "title": "The Whispering Library",
+      "summary": "A shelf of books has begun quietly describing events that nobody remembers.",
+      "featured_skill": "Scribing",
+      "duration_minutes": 20,
+      "tier": "normal",
+      "recommended_level": 2,
+      "chapter": "chapter1",
+      "party_size": {
+        "min": 2,
+        "max": 4
+      },
+      "icon": "map",
+      "approaches": [
+        {
+          "key": "careful",
+          "label": "Careful investigation",
+          "strategy_bonus": 5,
+          "description": "Prioritize reliable evidence and steady bonuses."
+        },
+        {
+          "key": "curious",
+          "label": "Search the unknown",
+          "strategy_bonus": -5,
+          "description": "Pursue optional rare discoveries despite higher challenge."
+        },
+        {
+          "key": "supportive",
+          "label": "Document for the guild",
+          "strategy_bonus": 0,
+          "description": "Prioritize shared renown and a careful expedition log."
+        }
+      ],
+      "story_beats": {
+        "departure": "The library seems quiet until a book begins whispering a story nobody remembers.",
+        "midpoint": "A repeated phrase points toward the missing historian.",
+        "return": "Your party returns with a transcription of the impossible tale."
+      }
+    },
+    {
+      "key": "lost_index",
+      "title": "The Missing Index",
+      "summary": "The archive index points to rooms that do not appear on any map.",
+      "featured_skill": "Research",
+      "duration_minutes": 20,
+      "tier": "normal",
+      "recommended_level": 3,
+      "chapter": "chapter1",
+      "party_size": {
+        "min": 2,
+        "max": 4
+      },
+      "icon": "map",
+      "approaches": [
+        {
+          "key": "careful",
+          "label": "Careful investigation",
+          "strategy_bonus": 5,
+          "description": "Prioritize reliable evidence and steady bonuses."
+        },
+        {
+          "key": "curious",
+          "label": "Search the unknown",
+          "strategy_bonus": -5,
+          "description": "Pursue optional rare discoveries despite higher challenge."
+        },
+        {
+          "key": "supportive",
+          "label": "Document for the guild",
+          "strategy_bonus": 0,
+          "description": "Prioritize shared renown and a careful expedition log."
+        }
+      ],
+      "story_beats": {
+        "departure": "Three catalog drawers point toward a room missing from the architect's plans.",
+        "midpoint": "The hidden collection is filled with carefully rewritten labels.",
+        "return": "The recovered index suggests that someone changed the archive itself."
+      }
+    },
+    {
+      "key": "lantern_vault",
+      "title": "The Lantern Vault",
+      "summary": "Seven enchanted lamps illuminate symbols on a sealed vault door.",
+      "featured_skill": "Restoration",
+      "duration_minutes": 20,
+      "tier": "normal",
+      "recommended_level": 4,
+      "chapter": "chapter2",
+      "party_size": {
+        "min": 2,
+        "max": 4
+      },
+      "icon": "map",
+      "approaches": [
+        {
+          "key": "careful",
+          "label": "Careful investigation",
+          "strategy_bonus": 5,
+          "description": "Prioritize reliable evidence and steady bonuses."
+        },
+        {
+          "key": "curious",
+          "label": "Search the unknown",
+          "strategy_bonus": -5,
+          "description": "Pursue optional rare discoveries despite higher challenge."
+        },
+        {
+          "key": "supportive",
+          "label": "Document for the guild",
+          "strategy_bonus": 0,
+          "description": "Prioritize shared renown and a careful expedition log."
+        }
+      ],
+      "story_beats": {
+        "departure": "Seven lanterns hang above an old stone threshold. Their lights will not stay in sequence.",
+        "midpoint": "A restored lantern reveals a version mark carved into the doorway.",
+        "return": "The party returns with evidence of an earlier Chronicle edition."
+      }
+    },
+    {
+      "key": "inkwell_catacombs",
+      "title": "The Inkwell Catacombs",
+      "summary": "Black ink seeps upward from a forgotten printing chamber, carrying fragments of a lost story.",
+      "featured_skill": "Restoration",
+      "duration_minutes": 20,
+      "tier": "advanced",
+      "recommended_level": 5,
+      "chapter": "chapter2",
+      "party_size": {
+        "min": 2,
+        "max": 4
+      },
+      "icon": "map",
+      "approaches": [
+        {
+          "key": "careful",
+          "label": "Careful investigation",
+          "strategy_bonus": 5,
+          "description": "Prioritize reliable evidence and steady bonuses."
+        },
+        {
+          "key": "curious",
+          "label": "Search the unknown",
+          "strategy_bonus": -5,
+          "description": "Pursue optional rare discoveries despite higher challenge."
+        },
+        {
+          "key": "supportive",
+          "label": "Document for the guild",
+          "strategy_bonus": 0,
+          "description": "Prioritize shared renown and a careful expedition log."
+        }
+      ],
+      "story_beats": {
+        "departure": "Dark ink traces strange paths along the vault floor.",
+        "midpoint": "A seal recovered from the ink names a forgotten order of scribes.",
+        "return": "The guild secures the fragments before the magic fades."
+      }
+    },
+    {
+      "key": "historian_study",
+      "title": "The Historian's Study",
+      "summary": "Three contradictory drafts of the same royal history are hidden in a historian's abandoned study.",
+      "featured_skill": "Scribing",
+      "duration_minutes": 20,
+      "tier": "advanced",
+      "recommended_level": 6,
+      "chapter": "chapter2",
+      "party_size": {
+        "min": 2,
+        "max": 4
+      },
+      "icon": "map",
+      "approaches": [
+        {
+          "key": "careful",
+          "label": "Careful investigation",
+          "strategy_bonus": 5,
+          "description": "Prioritize reliable evidence and steady bonuses."
+        },
+        {
+          "key": "curious",
+          "label": "Search the unknown",
+          "strategy_bonus": -5,
+          "description": "Pursue optional rare discoveries despite higher challenge."
+        },
+        {
+          "key": "supportive",
+          "label": "Document for the guild",
+          "strategy_bonus": 0,
+          "description": "Prioritize shared renown and a careful expedition log."
+        }
+      ],
+      "story_beats": {
+        "departure": "The historian's desk is untouched, as though its owner left only moments ago.",
+        "midpoint": "Three drafts disagree on one royal decree. A hidden note asks for the earliest copy.",
+        "return": "The party brings back evidence that the history was deliberately revised."
+      }
+    }
+  ],
+  "events": [
+    {
+      "key": "unending_footnote",
+      "title": "The Unending Footnote",
+      "context": "A footnote references itself and seems to be getting longer by the minute.",
+      "skill": "Scribing",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Summarize the note",
+          "effect": "reliable_bonus",
+          "consequence": "You seal the loop with a clear summary; the archivists can finally stop rereading it."
+        },
+        {
+          "id": "option_2",
+          "label": "Trace its earliest reference",
+          "effect": "discovery_chance",
+          "consequence": "The earliest reference seems to predate the manuscript by a century."
+        },
+        {
+          "id": "option_3",
+          "label": "Archive a safe copy",
+          "effect": "guild_renown",
+          "consequence": "Your copy gives the guild a stable version for its records."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "sealed_chamber",
+      "title": "The Sealed Chamber",
+      "context": "Damaged sigils cover the entrance of a narrow chamber.",
+      "skill": "Restoration",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Repair the seal",
+          "effect": "reliable_bonus",
+          "consequence": "The damaged sigil holds long enough to let the party pass safely."
+        },
+        {
+          "id": "option_2",
+          "label": "Read the surviving marks",
+          "effect": "discovery_chance",
+          "consequence": "The oldest marks reveal the chamber was sealed from the inside."
+        },
+        {
+          "id": "option_3",
+          "label": "Mark a safe route",
+          "effect": "guild_renown",
+          "consequence": "Your route markers help the guild reconstruct the chamber layout."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "absent_librarian",
+      "title": "The Absent Librarian",
+      "context": "An empty chair keeps turning pages in a book.",
+      "skill": "Research",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Study the book",
+          "effect": "reliable_bonus",
+          "consequence": "The pages describe a quiet visitor who never signed the lending book."
+        },
+        {
+          "id": "option_2",
+          "label": "Follow the page numbers",
+          "effect": "discovery_chance",
+          "consequence": "The repeating page numbers form a short numerical clue."
+        },
+        {
+          "id": "option_3",
+          "label": "Write down the pattern",
+          "effect": "guild_renown",
+          "consequence": "A precise transcription becomes part of the shared investigation."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "singing_ledger",
+      "title": "The Singing Ledger",
+      "context": "A merchant ledger hums whenever two numbers match.",
+      "skill": "Scribing",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Balance its entries",
+          "effect": "reliable_bonus",
+          "consequence": "You reconcile the figures, and the ledger hums a satisfied chord."
+        },
+        {
+          "id": "option_2",
+          "label": "Study the tune",
+          "effect": "discovery_chance",
+          "consequence": "The tune matches a melody in an old festival account."
+        },
+        {
+          "id": "option_3",
+          "label": "Copy the unusual totals",
+          "effect": "guild_renown",
+          "consequence": "The odd totals reveal a pattern others can investigate."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "wrong_way_map",
+      "title": "The Wrong-Way Map",
+      "context": "A map points north no matter how it is turned.",
+      "skill": "Research",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Trust the compass",
+          "effect": "reliable_bonus",
+          "consequence": "The compass route leads to a safe crossing."
+        },
+        {
+          "id": "option_2",
+          "label": "Compare another map",
+          "effect": "discovery_chance",
+          "consequence": "Another map reveals a vanished bridge in the same place."
+        },
+        {
+          "id": "option_3",
+          "label": "Trace hidden ink",
+          "effect": "guild_renown",
+          "consequence": "The hidden ink traces a path that can be added to the guild chart."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "vanished_stamp",
+      "title": "The Vanished Seal",
+      "context": "The royal wax seal has faded, leaving behind a warm imprint.",
+      "skill": "Restoration",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Restore the imprint",
+          "effect": "reliable_bonus",
+          "consequence": "A careful repair leaves the shape of the royal seal intact."
+        },
+        {
+          "id": "option_2",
+          "label": "Identify the wax",
+          "effect": "discovery_chance",
+          "consequence": "The wax contains an unfamiliar mineral that may identify its origin."
+        },
+        {
+          "id": "option_3",
+          "label": "Describe the original design",
+          "effect": "guild_renown",
+          "consequence": "Your sketch lets the guild compare it with other seals."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "mirror_archive",
+      "title": "The Mirrored Archive",
+      "context": "An inscription reads differently in each polished surface.",
+      "skill": "Research",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Decode the reflection",
+          "effect": "reliable_bonus",
+          "consequence": "One reflection shows a word missing from every ordinary copy."
+        },
+        {
+          "id": "option_2",
+          "label": "Test a second mirror",
+          "effect": "discovery_chance",
+          "consequence": "The second mirror reveals an older spelling of the inscription."
+        },
+        {
+          "id": "option_3",
+          "label": "Take a careful rubbing",
+          "effect": "guild_renown",
+          "consequence": "Your rubbing preserves the script for future researchers."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "ghostly_edit",
+      "title": "The Gentle Correction",
+      "context": "A manuscript corrects a spelling mistake whenever you look away.",
+      "skill": "Scribing",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Accept the edit",
+          "effect": "reliable_bonus",
+          "consequence": "You accept the correction and preserve the text in its clearest form."
+        },
+        {
+          "id": "option_2",
+          "label": "Inspect the margin",
+          "effect": "discovery_chance",
+          "consequence": "A pencil mark in the margin suggests the page knows its previous readers."
+        },
+        {
+          "id": "option_3",
+          "label": "Record both versions",
+          "effect": "guild_renown",
+          "consequence": "Your comparison of both versions helps establish the revision order."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "warm_ink",
+      "title": "The Warm Inkwell",
+      "context": "A bottle of ink seems warm, even though the room is cold.",
+      "skill": "Restoration",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Seal the bottle",
+          "effect": "reliable_bonus",
+          "consequence": "The warmed bottle is safely contained without spilling its contents."
+        },
+        {
+          "id": "option_2",
+          "label": "Test a single drop",
+          "effect": "discovery_chance",
+          "consequence": "One drop spells a place name before vanishing."
+        },
+        {
+          "id": "option_3",
+          "label": "Copy its label",
+          "effect": "guild_renown",
+          "consequence": "The label provides a maker's mark for the guild registry."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "lost_list",
+      "title": "The List of Lists",
+      "context": "A catalog contains an index to every catalog except itself.",
+      "skill": "Scribing",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Add the missing entry",
+          "effect": "reliable_bonus",
+          "consequence": "Your new entry completes the catalog without contradiction."
+        },
+        {
+          "id": "option_2",
+          "label": "Research the omission",
+          "effect": "discovery_chance",
+          "consequence": "The missing catalog seems to have been hidden deliberately."
+        },
+        {
+          "id": "option_3",
+          "label": "Create a cross-reference",
+          "effect": "guild_renown",
+          "consequence": "A clear cross-reference helps every future scholar navigate the list."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "lunar_pages",
+      "title": "Pages by Moonlight",
+      "context": "Faint writing becomes visible only beneath a silver lamp.",
+      "skill": "Research",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Read slowly",
+          "effect": "reliable_bonus",
+          "consequence": "Slow reading reveals a complete sentence beneath the silver light."
+        },
+        {
+          "id": "option_2",
+          "label": "Compare with another page",
+          "effect": "discovery_chance",
+          "consequence": "The neighboring page uses a different date for the same event."
+        },
+        {
+          "id": "option_3",
+          "label": "Sketch the glyphs",
+          "effect": "guild_renown",
+          "consequence": "Your glyph sketch helps the guild preserve the fragile text."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "false_door",
+      "title": "The Polite Door",
+      "context": "A door apologizes each time someone tries to open it.",
+      "skill": "Restoration",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Fix the hinge",
+          "effect": "reliable_bonus",
+          "consequence": "After a small adjustment, the door opens and thanks you politely."
+        },
+        {
+          "id": "option_2",
+          "label": "Ask what happened",
+          "effect": "discovery_chance",
+          "consequence": "The door remembers a traveler whose name has vanished from records."
+        },
+        {
+          "id": "option_3",
+          "label": "Search for another entrance",
+          "effect": "guild_renown",
+          "consequence": "The alternate route gives the party a reliable way forward."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "paper_rain",
+      "title": "A Rain of Paper",
+      "context": "A tiny storm of paper circles a deserted reading table.",
+      "skill": "Restoration",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Calm the magic",
+          "effect": "reliable_bonus",
+          "consequence": "You settle the paper storm and keep the pages from tearing."
+        },
+        {
+          "id": "option_2",
+          "label": "Read a falling page",
+          "effect": "discovery_chance",
+          "consequence": "One falling page contains a line the Chronicle no longer remembers."
+        },
+        {
+          "id": "option_3",
+          "label": "Gather loose fragments",
+          "effect": "guild_renown",
+          "consequence": "Your recovered fragments can be organized by the guild."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "silent_bell",
+      "title": "The Silent Bell",
+      "context": "An ancient bell moves but makes no sound.",
+      "skill": "Research",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Read its inscription",
+          "effect": "reliable_bonus",
+          "consequence": "The inscription identifies the bell as a warning for forgotten stories."
+        },
+        {
+          "id": "option_2",
+          "label": "Test the clapper",
+          "effect": "discovery_chance",
+          "consequence": "The clapper is intact; the silence is magical rather than mechanical."
+        },
+        {
+          "id": "option_3",
+          "label": "Record the silence",
+          "effect": "guild_renown",
+          "consequence": "Your notes add a new clue to the guild's records."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "midnight_draft",
+      "title": "The Midnight Draft",
+      "context": "A draft of the Chronicle is dated tomorrow.",
+      "skill": "Scribing",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Compare its text",
+          "effect": "reliable_bonus",
+          "consequence": "You compare the draft line by line and find a safe copy of the passage."
+        },
+        {
+          "id": "option_2",
+          "label": "Investigate the date",
+          "effect": "discovery_chance",
+          "consequence": "The date is written in a calendar used before the current king."
+        },
+        {
+          "id": "option_3",
+          "label": "Preserve an exact copy",
+          "effect": "guild_renown",
+          "consequence": "An exact duplicate gives the guild a reliable future reference."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "hidden_stair",
+      "title": "The Hidden Stair",
+      "context": "A worn book spine reveals the outline of a secret staircase.",
+      "skill": "Research",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Open the passage",
+          "effect": "reliable_bonus",
+          "consequence": "The stairs open into an undisturbed passage of old stone."
+        },
+        {
+          "id": "option_2",
+          "label": "Map the steps",
+          "effect": "discovery_chance",
+          "consequence": "Your map shows that the stairs bend around an empty room."
+        },
+        {
+          "id": "option_3",
+          "label": "Look for another clue",
+          "effect": "guild_renown",
+          "consequence": "A second clue points toward a shelf marked with a faded crest."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "stubborn_quill",
+      "title": "The Stubborn Quill",
+      "context": "A quill refuses to write a particular name.",
+      "skill": "Scribing",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Try another name",
+          "effect": "reliable_bonus",
+          "consequence": "A different name makes the quill begin writing normally again."
+        },
+        {
+          "id": "option_2",
+          "label": "Study the ink",
+          "effect": "discovery_chance",
+          "consequence": "The ink fades when the missing name is spoken aloud."
+        },
+        {
+          "id": "option_3",
+          "label": "Document the refusal",
+          "effect": "guild_renown",
+          "consequence": "Your careful report identifies the forbidden name's first appearance."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "broken_hourglass",
+      "title": "The Backward Hourglass",
+      "context": "Sand rises inside an old hourglass.",
+      "skill": "Restoration",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Repair the glass",
+          "effect": "reliable_bonus",
+          "consequence": "The hourglass works normally after its cracked frame is secured."
+        },
+        {
+          "id": "option_2",
+          "label": "Measure the sand",
+          "effect": "discovery_chance",
+          "consequence": "The rising sand reveals a hidden engraving on the glass."
+        },
+        {
+          "id": "option_3",
+          "label": "Trace its maker mark",
+          "effect": "guild_renown",
+          "consequence": "The maker's mark links the hourglass to an old royal workshop."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "forgotten_key",
+      "title": "The Forgotten Key",
+      "context": "A key opens a drawer that is no longer there.",
+      "skill": "Research",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Study the lock",
+          "effect": "reliable_bonus",
+          "consequence": "The matching lock was removed long ago, but its outline remains."
+        },
+        {
+          "id": "option_2",
+          "label": "Find the matching drawer",
+          "effect": "discovery_chance",
+          "consequence": "A drawer in the neighboring room fits the key exactly."
+        },
+        {
+          "id": "option_3",
+          "label": "Copy the key shape",
+          "effect": "guild_renown",
+          "consequence": "A sketch of the key helps identify a missing cabinet."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "borrowed_memory",
+      "title": "A Borrowed Memory",
+      "context": "A page describes a festival none of the villagers remember.",
+      "skill": "Research",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Interview a witness",
+          "effect": "reliable_bonus",
+          "consequence": "A witness remembers music, though not the festival itself."
+        },
+        {
+          "id": "option_2",
+          "label": "Search old records",
+          "effect": "discovery_chance",
+          "consequence": "Old ledgers show the festival took place on a date the Chronicle omits."
+        },
+        {
+          "id": "option_3",
+          "label": "Preserve the account",
+          "effect": "guild_renown",
+          "consequence": "A preserved account helps the guild restore the celebration's history."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "tower_footnote",
+      "title": "The Tower in the Margin",
+      "context": "A marginal note mentions a tower absent from every map.",
+      "skill": "Scribing",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Follow the reference",
+          "effect": "reliable_bonus",
+          "consequence": "The reference leads to a real tower foundation concealed by vines."
+        },
+        {
+          "id": "option_2",
+          "label": "Compare versions",
+          "effect": "discovery_chance",
+          "consequence": "An earlier manuscript contains a map that still shows the tower."
+        },
+        {
+          "id": "option_3",
+          "label": "Add a cautious note",
+          "effect": "guild_renown",
+          "consequence": "A careful margin note lets the guild connect both records."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "ink_bridge",
+      "title": "The Ink Bridge",
+      "context": "A puddle of ink briefly forms the shape of a stone bridge.",
+      "skill": "Restoration",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Stabilize the image",
+          "effect": "reliable_bonus",
+          "consequence": "The ink bridge holds its shape long enough to be measured."
+        },
+        {
+          "id": "option_2",
+          "label": "Study its reflection",
+          "effect": "discovery_chance",
+          "consequence": "The reflection reveals an inscription beneath the imagined arch."
+        },
+        {
+          "id": "option_3",
+          "label": "Record its arch pattern",
+          "effect": "guild_renown",
+          "consequence": "Your arch drawing allows the guild to compare an old stone bridge."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "silver_latch",
+      "title": "The Silver Latch",
+      "context": "A silver latch turns only while a sentence is read aloud.",
+      "skill": "Scribing",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Read the inscription",
+          "effect": "reliable_bonus",
+          "consequence": "The latch opens gently when the line is read in its original order."
+        },
+        {
+          "id": "option_2",
+          "label": "Inspect the latch",
+          "effect": "discovery_chance",
+          "consequence": "A maker's mark on the latch suggests a forgotten restoration school."
+        },
+        {
+          "id": "option_3",
+          "label": "Note the exact words",
+          "effect": "guild_renown",
+          "consequence": "Your exact transcription helps others repeat the opening spell."
+        }
+      ],
+      "icon": "sparkles"
+    },
+    {
+      "key": "last_annotation",
+      "title": "The Last Annotation",
+      "context": "The final annotation is signed with a name nobody recognizes.",
+      "skill": "Research",
+      "type": "choice",
+      "options": [
+        {
+          "id": "option_1",
+          "label": "Trace the signature",
+          "effect": "reliable_bonus",
+          "consequence": "The signature is copied safely before its ink begins to disappear."
+        },
+        {
+          "id": "option_2",
+          "label": "Compare handwriting",
+          "effect": "discovery_chance",
+          "consequence": "A handwriting match points to the unnamed historian's own papers."
+        },
+        {
+          "id": "option_3",
+          "label": "Preserve the evidence",
+          "effect": "guild_renown",
+          "consequence": "The preserved signature becomes a lasting clue for the guild."
+        }
+      ],
+      "icon": "sparkles"
+    }
+  ],
+  "discoveries": [
+    {
+      "key": "missing_chapter",
+      "title": "The Missing Chapter",
+      "text": "An entire chapter is absent, but the numbering never skipped a beat.",
+      "rarity": "common",
+      "chain_key": "missing_history",
+      "story_required": true,
+      "chain_step": 1
+    },
+    {
+      "key": "unnamed_historian",
+      "title": "The Unnamed Historian",
+      "text": "An unsigned portrait bears the same handwriting as a lost Chronicle entry.",
+      "rarity": "uncommon",
+      "chain_key": "missing_history",
+      "story_required": true,
+      "chain_step": 2
+    },
+    {
+      "key": "prior_draft",
+      "title": "The Earlier Draft",
+      "text": "The oldest draft contains a passage the kingdom has somehow forgotten.",
+      "rarity": "rare",
+      "chain_key": "missing_history",
+      "story_required": true,
+      "chain_step": 3
+    },
+    {
+      "key": "unending_footnote",
+      "title": "The Unending Footnote",
+      "text": "A note that references itself may be the oldest unresolved question in the kingdom.",
+      "rarity": "common",
+      "chain_key": null,
+      "story_required": false,
+      "chain_step": null
+    },
+    {
+      "key": "quiet_quill",
+      "title": "The Quiet Quill",
+      "text": "A quill fell silent after writing a sentence no one can remember.",
+      "rarity": "uncommon",
+      "chain_key": null,
+      "story_required": false,
+      "chain_step": null
+    },
+    {
+      "key": "echoing_index",
+      "title": "The Echoing Index",
+      "text": "A cross-reference points to a shelf that disappears when named aloud.",
+      "rarity": "uncommon",
+      "chain_key": "catalog_mystery",
+      "story_required": false,
+      "chain_step": 1
+    },
+    {
+      "key": "borrowed_book",
+      "title": "The Borrowed Book",
+      "text": "The oldest library loan has a return date a hundred years from now.",
+      "rarity": "uncommon",
+      "chain_key": "catalog_mystery",
+      "story_required": false,
+      "chain_step": 2
+    },
+    {
+      "key": "library_within",
+      "title": "The Library Within",
+      "text": "Inside an index you find a description of the very library you are standing in.",
+      "rarity": "rare",
+      "chain_key": "catalog_mystery",
+      "story_required": false,
+      "chain_step": 3
+    },
+    {
+      "key": "ink_that_remembers",
+      "title": "Ink That Remembers",
+      "text": "Some old ink appears to record every hand that has held the pen.",
+      "rarity": "rare",
+      "chain_key": null,
+      "story_required": false,
+      "chain_step": null
+    },
+    {
+      "key": "kindly_revision",
+      "title": "The Kindly Revision",
+      "text": "A corrected passage is accompanied by the words: I hope this helps.",
+      "rarity": "common",
+      "chain_key": null,
+      "story_required": false,
+      "chain_step": null
+    },
+    {
+      "key": "tired_seal",
+      "title": "The Tired Seal",
+      "text": "The royal seal appears to have been used so often that its wax is worn smooth.",
+      "rarity": "common",
+      "chain_key": null,
+      "story_required": false,
+      "chain_step": null
+    },
+    {
+      "key": "map_of_silence",
+      "title": "The Map of Silence",
+      "text": "A map depicts the paths of conversations that never happened.",
+      "rarity": "rare",
+      "chain_key": null,
+      "story_required": false,
+      "chain_step": null
+    },
+    {
+      "key": "first_margin",
+      "title": "The First Margin",
+      "text": "Someone annotated an empty page before anyone had written on it.",
+      "rarity": "uncommon",
+      "chain_key": null,
+      "story_required": false,
+      "chain_step": null
+    },
+    {
+      "key": "new_lantern",
+      "title": "The Seventh Lantern",
+      "text": "One lantern is always lit before the rest, even with no candle inside.",
+      "rarity": "common",
+      "chain_key": null,
+      "story_required": false,
+      "chain_step": null
+    },
+    {
+      "key": "last_editor",
+      "title": "The Last Editor",
+      "text": "The final hand to revise the Chronicle left no name, only an invitation to look closer.",
+      "rarity": "rare",
+      "chain_key": null,
+      "story_required": false,
+      "chain_step": null
+    }
+  ],
+  "modifiers": [
+    {
+      "key": "unstable_enchantments",
+      "title": "Unstable Enchantments",
+      "description": "Restoration checks require more care; higher optional rewards.",
+      "affected_skill": "Restoration",
+      "skill_check_adjustment": -5
+    },
+    {
+      "key": "missing_references",
+      "title": "Missing References",
+      "description": "Research has extra clue opportunities; maps contain gaps.",
+      "affected_skill": "Research",
+      "skill_check_adjustment": 5
+    },
+    {
+      "key": "royal_inspection",
+      "title": "Royal Inspection",
+      "description": "Scribing helps improve recovered records and gold bonuses.",
+      "affected_skill": "Scribing",
+      "skill_check_adjustment": 5
+    },
+    {
+      "key": "ancient_wards",
+      "title": "Ancient Wards",
+      "description": "Everyone chooses a careful preparation to pass sealed gates.",
+      "affected_skill": "Restoration",
+      "skill_check_adjustment": -3
+    },
+    {
+      "key": "corrupted_chronicle",
+      "title": "Corrupted Chronicle",
+      "description": "An additional optional cipher may appear, respecting the two-event cap.",
+      "affected_skill": "Research",
+      "skill_check_adjustment": 0
+    }
+  ],
+  "chapters": [
+    {
+      "key": "chapter1",
+      "title": "The Missing Pages",
+      "status": "launch",
+      "intro": "The pages of the Royal Chronicle are disappearing, yet its numbering is perfect.",
+      "objectives": [
+        {
+          "key": "expeditions",
+          "target": 3,
+          "type": "cooperative_expedition_completions"
+        },
+        {
+          "key": "renown",
+          "target": 300,
+          "type": "chapter_renown"
+        },
+        {
+          "key": "fragments",
+          "target": 2,
+          "type": "guaranteed_story_fragments"
+        }
+      ],
+      "recap": "The guild restores the first fragments and discovers a signature belonging to a forgotten historian.",
+      "scenes": [
+        {
+          "key": "arrival",
+          "text": "The Royal Chronicle has lost three pages. Stranger still, the librarian says nobody remembers what they contained."
+        },
+        {
+          "key": "first_fragment",
+          "text": "A page recovered from a nearby library describes a royal procession no living witness can recall. Its number fits perfectly in the Chronicle."
+        },
+        {
+          "key": "second_fragment",
+          "text": "Another expedition returns with a margin note: If the record is corrected, who will remember the first version?"
+        },
+        {
+          "key": "reveal",
+          "text": "A name appears on the fragments, then fades. The guild resolves to find the historian who signed them."
+        }
+      ],
+      "guaranteed_clue_rules": [
+        {
+          "clue_key": "missing_chapter",
+          "trigger": "first_successful_missing_pages"
+        },
+        {
+          "clue_key": "unnamed_historian",
+          "trigger": "third_eligible_chapter1_expedition"
+        }
+      ]
+    },
+    {
+      "key": "chapter2",
+      "title": "The Forgotten Author",
+      "status": "launch",
+      "intro": "Three drafts disagree about a historian whose name has been erased from memory.",
+      "objectives": [
+        {
+          "key": "expeditions",
+          "target": 5,
+          "type": "cooperative_expedition_completions"
+        },
+        {
+          "key": "renown",
+          "target": 700,
+          "type": "chapter_renown"
+        },
+        {
+          "key": "evidence",
+          "target": 3,
+          "type": "guaranteed_evidence_clues"
+        }
+      ],
+      "recap": "A hidden instruction is recovered: Seek the version before the first revision.",
+      "scenes": [
+        {
+          "key": "arrival",
+          "text": "The lost historian left behind three versions of the same history, each contradicting the others."
+        },
+        {
+          "key": "first_draft",
+          "text": "The first draft mentions a tower the kingdom no longer remembers."
+        },
+        {
+          "key": "second_draft",
+          "text": "The second draft erases the tower but preserves an impossible date in its margin."
+        },
+        {
+          "key": "third_draft",
+          "text": "The third draft contains only a single instruction: Seek the version before the first revision."
+        },
+        {
+          "key": "reveal",
+          "text": "The guild can now search for the original Chronicle - and begin to ask why it was changed."
+        }
+      ],
+      "guaranteed_clue_rules": [
+        {
+          "clue_key": "prior_draft",
+          "trigger": "third_eligible_chapter2_expedition"
+        },
+        {
+          "clue_key": "first_margin",
+          "trigger": "fourth_eligible_chapter2_expedition"
+        },
+        {
+          "clue_key": "last_editor",
+          "trigger": "fifth_eligible_chapter2_expedition"
+        }
+      ]
+    },
+    {
+      "key": "chapter3",
+      "title": "The Forbidden Revision",
+      "status": "future_outline",
+      "intro": "An earlier draft suggests someone edited memories to prevent a disaster.",
+      "objectives": [],
+      "recap": null
+    },
+    {
+      "key": "chapter4",
+      "title": "The Final Draft",
+      "status": "future_outline",
+      "intro": "The guild must decide how to preserve history without repeating old mistakes.",
+      "objectives": [],
+      "recap": null
+    }
+  ]
+}

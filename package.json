@@ -1,0 +1,30 @@
+{
+  "name": "documentation-guild",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=24.11.1 <25"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @guild/web dev",
+    "dev:api": "pnpm --filter @guild/api dev",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "build": "pnpm --filter @guild/web build",
+    "format": "prettier --write apps packages tests *.json *.mjs *.ts",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.65.0",
+    "@types/node": "24.10.1",
+    "eslint": "10.14.0",
+    "prettier": "3.10.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.72.2",
+    "vitest": "3.2.7"
+  }
+}

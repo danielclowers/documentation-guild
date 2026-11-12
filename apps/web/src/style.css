@@ -1,0 +1,134 @@
+:root {
+  color-scheme: dark;
+  font-family: 'Instrument Sans', system-ui, sans-serif;
+  background: #211e19;
+  color: #f6ead8;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 280px;
+}
+
+.page {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 clamp(20px, 5vw, 80px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 82px;
+  border-bottom: 1px solid #4a3b2c;
+  color: #e8d7bc;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.book-mark {
+  width: 21px;
+  height: 17px;
+  border: 2px solid #d2ab6b;
+  border-radius: 3px 3px 1px 1px;
+  background: linear-gradient(to right, transparent 44%, #d2ab6b 44% 56%, transparent 56%);
+  transform: rotate(-8deg);
+}
+
+.welcome {
+  min-height: calc(100svh - 82px);
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  align-content: center;
+  align-items: center;
+  gap: clamp(26px, 5vw, 84px);
+  padding: clamp(36px, 7vw, 104px) 0;
+}
+
+h1 {
+  max-width: 9ch;
+  margin: 0;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(3rem, 5.6vw, 6.25rem);
+  letter-spacing: -0.065em;
+  line-height: 0.98;
+}
+
+.premise {
+  max-width: 34ch;
+  color: #dfcbb1;
+  line-height: 1.65;
+  font-size: clamp(1rem, 1.5vw, 1.18rem);
+  margin: 26px 0 0;
+}
+
+.access {
+  border-top: 1px solid #4a3b2c;
+  margin-top: 34px;
+  padding-top: 22px;
+  max-width: 35ch;
+}
+
+.access h2 {
+  color: #e1b776;
+  font-size: 1rem;
+  margin: 0 0 8px;
+}
+.access p {
+  color: #c8b8a5;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.hall {
+  margin: 0;
+  padding: 11px;
+  border: 1px solid #665039;
+  background: #2b231f;
+  box-shadow: 0 18px 55px #160e0b80;
+}
+
+.hall-art {
+  aspect-ratio: 352 / 240;
+  background: #241d23;
+}
+.hall-art[data-render-failed] {
+  display: none;
+}
+.hall-art canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+.hall figcaption {
+  padding: 12px 3px 3px;
+  color: #dac39e;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 850px) {
+  .brand {
+    min-height: 62px;
+  }
+  .welcome {
+    min-height: auto;
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  h1 {
+    max-width: 13ch;
+    font-size: clamp(2.55rem, 8vw, 4rem);
+    overflow-wrap: break-word;
+  }
+  .hall {
+    width: min(100%, 560px);
+  }
+}

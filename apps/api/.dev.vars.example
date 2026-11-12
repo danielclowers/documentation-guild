@@ -1,0 +1,2 @@
+# Reserved for the Clerk integration milestone. Never set these in the web app.
+CLERK_SECRET_KEY=
