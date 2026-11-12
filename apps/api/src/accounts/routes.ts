@@ -3,6 +3,7 @@ import {
   characterLevel,
   characterSchema,
   inviteTokenSchema,
+  hallStations,
   passwordSchema,
   usernameSchema,
 } from '@guild/shared';
@@ -22,8 +23,9 @@ import {
   redeemInvitation,
 } from './invitations';
 
-interface Bindings extends ClerkBindings {
-  DB: D1Database;
+import { guildRoom, notifyHall, type HallBindings } from '../realtime/hall-data';
+
+interface Bindings extends ClerkBindings, HallBindings {
   WEB_URL?: string;
   ALLOWED_ORIGINS?: string;
   AUTH_RATE_LIMIT?: RateLimit;
@@ -118,9 +120,10 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
     const origin = c.req.header('Origin');
     if (origin && !origins.includes(origin))
       return c.json({ error: { code: 'ORIGIN_DENIED' } }, 403);
+    if (c.req.header('Upgrade')?.toLowerCase() === 'websocket') return next();
     return cors({
       origin: origins,
-      allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowHeaders: ['Authorization', 'Content-Type'],
       maxAge: 600,
     })(c, next);
@@ -137,6 +140,19 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
       return c.json({ error: { code: 'RATE_LIMITED' } }, 429);
     }
     return next();
+  });
+
+  router.get('/realtime/socket', async (c) => {
+    if (c.req.header('Upgrade')?.toLowerCase() !== 'websocket') return c.body(null, 426);
+    if (!c.req.header('Origin')) return c.body(null, 403);
+    const room = guildRoom(c.env);
+    if (!room) return c.body(null, 503);
+    const request = new Request('https://guild-room.internal/connect', {
+      headers: c.req.raw.headers,
+    });
+    return (await room.fetch(
+      request as unknown as Parameters<typeof room.fetch>[0],
+    )) as unknown as Response;
   });
 
   router.post('/auth/invitation-status', async (c) => {
@@ -223,6 +239,39 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
     return next();
   });
 
+  members.post('/realtime/ticket', async (c) => {
+    const origin = c.req.header('Origin');
+    if (!origin || !guildRoom(c.env)) return c.json({ error: { code: 'UNAVAILABLE' } }, 503);
+    const now = Date.now();
+    const token = randomInviteToken();
+    const [, inserted] = await c.env.DB.batch([
+      c.env.DB.prepare('DELETE FROM hall_tickets WHERE expires_at <= ?').bind(now),
+      c.env.DB.prepare(
+        `INSERT INTO hall_tickets (token_hash, member_id, origin, expires_at)
+        SELECT ?, m.id, ?, ? FROM members m JOIN characters ch ON ch.member_id = m.id
+        WHERE m.id = ? AND m.status = 'active' AND
+          (SELECT COUNT(*) FROM hall_tickets WHERE member_id = m.id) < 8`,
+      ).bind(await hashInvite(token), origin, now + 30_000, c.var.member.id),
+    ]);
+    if (inserted?.meta.changes !== 1) return c.json({ error: { code: 'INVALID_STATE' } }, 409);
+    return c.json({ ticket: token });
+  });
+
+  members.put('/me/hall-station', async (c) => {
+    const input = await parseBody(c, z.strictObject({ station: z.enum(hallStations) }));
+    if (!input) return c.json({ error: { code: 'INVALID_INPUT' } }, 400);
+    const memberId = c.var.member.id;
+    const result = await c.env.DB.prepare(
+      `UPDATE characters SET hall_station = ?, hall_station_at = ?
+      WHERE member_id = ? AND hall_station <> ? AND EXISTS
+        (SELECT 1 FROM members WHERE id = ? AND status = 'active')`,
+    )
+      .bind(input.station, Date.now(), memberId, input.station, memberId)
+      .run();
+    if (result.meta.changes) await notifyHall(c.env, memberId).catch(() => undefined);
+    return c.body(null, 204);
+  });
+
   members.get('/me', async (c) => c.json(await getProfile(c.env.DB, c.var.member)));
   members.patch('/me/character', async (c) => {
     const input = await parseBody(c, characterSchema);
@@ -236,6 +285,7 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
     )
       .bind(crypto.randomUUID(), displayName, hairStyle, hairColor, tunicColor, c.var.member.id)
       .run();
+    await notifyHall(c.env, c.var.member.id).catch(() => undefined);
     return c.json(await getProfile(c.env.DB, c.var.member));
   });
 
@@ -306,6 +356,7 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
       audit(c.env.DB, c.var.member.id, `member.${input.status}`, id, Date.now(), true),
     ]);
     if (update?.meta.changes !== 1) return c.json({ error: { code: 'INVALID_STATE' } }, 409);
+    if (input.status === 'suspended') await notifyHall(c.env, id, true).catch(() => undefined);
     return c.body(null, 204);
   });
 

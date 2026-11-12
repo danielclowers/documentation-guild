@@ -29,3 +29,5 @@ export function skillLevel(xp: number): number {
 }
 
 export * from './accounts';
+
+export * from './hall';

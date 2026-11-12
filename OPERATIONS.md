@@ -12,3 +12,7 @@ In **Guild administration**, create a link for one coworker and copy it directly
 - The admin can read recent membership, invitation, and recovery issuance events through `GET /api/v1/admin/audit`. The log records internal IDs and actions. Passwords and raw links are excluded.
 
 If a revoked or expired invite leaves a Clerk user without membership, confirm the invite and user are related before performing any Clerk cleanup. Those accounts cannot access the guild.
+
+## Shared hall
+
+The roster includes authenticated members who have a current hall connection. Multiple tabs share one avatar. A 20-second heartbeat tracks connections, and a socket expires after 60 seconds without a heartbeat. Membership is rechecked periodically and suspension closes the member's sockets. When deploying the hall, apply D1 migration `0004_hall_presence.sql` and keep the `hall-v1` Durable Object migration in the Worker config. [Hosted API health](https://documentation-guild-preview.guild-api.workers.dev/health)

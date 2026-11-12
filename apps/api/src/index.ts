@@ -4,14 +4,17 @@ import { Hono } from 'hono';
 import { secureHeaders } from 'hono/secure-headers';
 import { accountRoutes } from './accounts/routes';
 
+export { GuildRoom } from './realtime/guild-room';
+
 type Bindings = { DB: D1Database };
 
 const app = new Hono<{ Bindings: Bindings }>();
 
-app.use('*', secureHeaders());
+const applyHeaders = secureHeaders();
+app.use('*', (c, next) => (c.req.header('Upgrade') ? next() : applyHeaders(c, next)));
 app.use('*', async (c, next) => {
   await next();
-  c.header('Cache-Control', 'no-store');
+  if (!c.req.header('Upgrade')) c.header('Cache-Control', 'no-store');
 });
 
 app.get('/health', async (c) => {

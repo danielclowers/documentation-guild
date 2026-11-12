@@ -13,6 +13,8 @@
   "ratelimits": [
     { "name": "AUTH_RATE_LIMIT", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } },
   ],
+  "durable_objects": { "bindings": [{ "name": "GUILD_ROOM", "class_name": "GuildRoom" }] },
+  "migrations": [{ "tag": "hall-v1", "new_sqlite_classes": ["GuildRoom"] }],
   "d1_databases": [
     {
       "binding": "DB",

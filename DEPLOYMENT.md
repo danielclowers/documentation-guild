@@ -1,6 +1,6 @@
 # Deployment setup
 
-The public welcome screen is live on GitHub Pages. The account UI opens when the web build has both its API URL and Clerk publishable key. [Live welcome screen](https://danielclowers.github.io/documentation-guild/)
+The hosted preview uses GitHub Pages for the frontend, Clerk development authentication, and the Cloudflare `documentation-guild-preview` Worker and D1 database. [Live welcome screen](https://danielclowers.github.io/documentation-guild/)
 
 ## Verify a Clerk development instance
 
@@ -12,7 +12,7 @@ The public welcome screen is live on GitHub Pages. The account UI opens when the
 
 ## Cloudflare
 
-Provision a staging Worker and D1 database. Use an explicit deployment configuration with its real database ID for `DB`, an `AUTH_RATE_LIMIT` binding, and the intended web URL and exact origin allowlist. Keep `CLERK_ISSUER` and `CLERK_AUDIENCE` consistent with Clerk. Set `CLERK_SECRET_KEY` through the Worker secret store. Optionally set the Clerk JWT public key as `CLERK_JWT_KEY` for offline verification. Without it the Worker resolves signing keys through Clerk. Apply migrations to that explicitly selected environment and verify `/health` before wiring it to the frontend. The checked-in Wrangler configuration targets local D1. [Cloudflare local bindings](https://developers.cloudflare.com/workers/local-development/bindings-per-env/) · [Workers rate limiter](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)
+Provision a staging Worker and D1 database. Use an explicit deployment configuration with its real database ID for `DB`, an `AUTH_RATE_LIMIT` binding, a `GUILD_ROOM` binding for `GuildRoom`, and the intended web URL and exact origin allowlist. Include the `hall-v1` SQLite Durable Object migration and keep its tag on subsequent deploys. Keep `CLERK_ISSUER` and `CLERK_AUDIENCE` consistent with Clerk. Set `CLERK_SECRET_KEY` through the Worker secret store. Optionally set the Clerk JWT public key as `CLERK_JWT_KEY` for offline verification. Without it the Worker resolves signing keys through Clerk. Apply migrations to that explicitly selected environment and verify `/health` before wiring it to the frontend. The checked-in Wrangler configuration targets local D1. [Cloudflare local bindings](https://developers.cloudflare.com/workers/local-development/bindings-per-env/) · [Workers rate limiter](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)
 
 ## GitHub Pages
 

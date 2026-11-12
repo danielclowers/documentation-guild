@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import type { HallVisualState } from './hall/canvas';
+import { hallSprites } from './hall/sprites';
 
 const WIDTH = 352;
 const HEIGHT = 240;
@@ -139,7 +141,8 @@ function drawHall(graphics: Phaser.GameObjects.Graphics) {
   rect(0x29232b, 157, 224, 38, 6);
 }
 
-export function mountHall(parent: HTMLElement): () => void {
+export function mountHall(parent: HTMLElement, getVisual?: () => HallVisualState): () => void {
+  let drawSprites: ReturnType<typeof hallSprites> | undefined;
   const game = new Phaser.Game({
     type: Phaser.CANVAS,
     parent,
@@ -147,12 +150,17 @@ export function mountHall(parent: HTMLElement): () => void {
     height: HEIGHT,
     pixelArt: true,
     banner: false,
+    fps: { target: 30 },
     audio: { noAudio: true },
     backgroundColor: '#241d23',
     scene: {
       create(this: Phaser.Scene) {
         drawHall(this.add.graphics());
-        this.game.events.once(Phaser.Core.Events.POST_RENDER, () => this.game.loop.sleep());
+        if (getVisual) drawSprites = hallSprites(this);
+        else this.game.events.once(Phaser.Core.Events.POST_RENDER, () => this.game.loop.sleep());
+      },
+      update() {
+        if (getVisual && !document.hidden) drawSprites?.(getVisual());
       },
     },
   });

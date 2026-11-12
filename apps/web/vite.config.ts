@@ -31,7 +31,8 @@ export default defineConfig(({ command, mode }) => {
     const sources = clerk
       ? [clerk, 'https://challenges.cloudflare.com', 'https://*.protect.clerk.com']
       : [];
-    const connect = [api, clerk, clerk && 'https://*.protect.clerk.com:*']
+    const websocket = api?.replace(/^http/, 'ws');
+    const connect = [api, websocket, clerk, clerk && 'https://*.protect.clerk.com:*']
       .filter(Boolean)
       .join(' ');
     const policy = [

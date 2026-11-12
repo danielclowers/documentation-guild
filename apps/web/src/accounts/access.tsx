@@ -6,6 +6,7 @@ import type { FormEvent } from 'react';
 import { accountApi, accountError, GuildApiError } from './api';
 import { AdminPanel } from './admin';
 import { PasswordSettings, RecoveryForm } from './password';
+import { LiveHall } from '../hall/live-hall';
 import { AvatarPreview, CharacterFields, startingAppearance } from './character';
 
 interface AccessProps {
@@ -13,6 +14,7 @@ interface AccessProps {
   invitation: string | null;
   recovery?: string | null;
   recoveryComplete?: boolean;
+  onEnter?: (inside: boolean) => void;
 }
 
 function SignInForm({ apiUrl, invitation, recoveryComplete }: AccessProps) {
@@ -154,7 +156,7 @@ function SignInForm({ apiUrl, invitation, recoveryComplete }: AccessProps) {
   );
 }
 
-function MemberAccess({ apiUrl, invitation, recoveryComplete }: AccessProps) {
+function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessProps) {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const { signOut } = useClerk();
   const request = useMemo(() => accountApi(apiUrl, getToken), [apiUrl, getToken]);
@@ -204,6 +206,12 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete }: AccessProps) {
     }
   }
 
+  const inside = Boolean(isSignedIn && profile?.character);
+  useEffect(() => {
+    onEnter?.(inside);
+    return () => onEnter?.(false);
+  }, [inside, onEnter]);
+
   if (!isLoaded) return <p role="status">Loading guild sign-in…</p>;
   if (!isSignedIn)
     return (
@@ -211,79 +219,84 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete }: AccessProps) {
     );
   const character = profile?.character;
   return (
-    <div className="account-panel">
-      <h2>{character ? `Welcome, ${character.displayName}` : 'Your guild account'}</h2>
-      {error && <p role="alert">{error}</p>}
-      {signOutError && <p role="alert">{signOutError}</p>}
-      {!profile &&
-        (error ? (
-          <button
-            type="button"
-            onClick={() => {
-              setError('');
-              setRevision((value) => value + 1);
-            }}
-          >
-            Try again
-          </button>
-        ) : (
-          <p role="status">Checking guild membership…</p>
-        ))}
-      {profile && (!character || editing) && (
-        <form className="account-form" onSubmit={(event) => void save(event)}>
-          <CharacterFields value={appearance} onChange={setAppearance} />
-          <button type="submit" disabled={busy}>
-            Save character
-          </button>
-          {character && (
+    <div className={inside ? 'member-hall-layout' : 'account-panel'}>
+      <div className="account-panel">
+        <h2>{character ? `Welcome, ${character.displayName}` : 'Your guild account'}</h2>
+        {error && <p role="alert">{error}</p>}
+        {signOutError && <p role="alert">{signOutError}</p>}
+        {!profile &&
+          (error ? (
             <button
               type="button"
               onClick={() => {
-                setEditing(false);
                 setError('');
+                setRevision((value) => value + 1);
               }}
             >
-              Cancel
+              Try again
             </button>
-          )}
-        </form>
+          ) : (
+            <p role="status">Checking guild membership…</p>
+          ))}
+        {profile && (!character || editing) && (
+          <form className="account-form" onSubmit={(event) => void save(event)}>
+            <CharacterFields value={appearance} onChange={setAppearance} />
+            <button type="submit" disabled={busy}>
+              Save character
+            </button>
+            {character && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(false);
+                  setError('');
+                }}
+              >
+                Cancel
+              </button>
+            )}
+          </form>
+        )}
+        {character && !editing && (
+          <div className="profile-summary">
+            <AvatarPreview appearance={character} />
+            <p>
+              Level {character.level} · {character.gold} gold
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                const { displayName, hairStyle, hairColor, tunicColor } = character;
+                setAppearance({ displayName, hairStyle, hairColor, tunicColor });
+                setEditing(true);
+              }}
+            >
+              Edit character
+            </button>
+          </div>
+        )}
+        {profile && <PasswordSettings />}
+        {profile?.role === 'admin' && <AdminPanel request={request} />}
+        <button
+          type="button"
+          onClick={() =>
+            void signOut()
+              .then(() => {
+                setProfile(undefined);
+                setAppearance(startingAppearance);
+                setEditing(false);
+                setError('');
+                setSignOutError('');
+              })
+              .catch(() => setSignOutError('Sign-out failed. Try again.'))
+          }
+        >
+          Sign out
+        </button>
+      </div>
+      {inside && profile && (
+        <LiveHall apiUrl={apiUrl} request={request} memberId={profile.memberId} />
       )}
-      {character && !editing && (
-        <div className="profile-summary">
-          <AvatarPreview appearance={character} />
-          <p>
-            Level {character.level} · {character.gold} gold
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              const { displayName, hairStyle, hairColor, tunicColor } = character;
-              setAppearance({ displayName, hairStyle, hairColor, tunicColor });
-              setEditing(true);
-            }}
-          >
-            Edit character
-          </button>
-        </div>
-      )}
-      {profile && <PasswordSettings />}
-      {profile?.role === 'admin' && <AdminPanel request={request} />}
-      <button
-        type="button"
-        onClick={() =>
-          void signOut()
-            .then(() => {
-              setProfile(undefined);
-              setAppearance(startingAppearance);
-              setEditing(false);
-              setError('');
-              setSignOutError('');
-            })
-            .catch(() => setSignOutError('Sign-out failed. Try again.'))
-        }
-      >
-        Sign out
-      </button>
     </div>
   );
 }
