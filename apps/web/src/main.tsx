@@ -1,6 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import './style.css';
+
+const GuildAccess = lazy(() => import('./accounts/access'));
+const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
+const accessLink = /^#\/(redeem|recover)\/(.*)$/.exec(location.hash);
+const invitation = accessLink?.[1] === 'redeem' ? (accessLink[2] ?? null) : null;
+const recovery = accessLink?.[1] === 'recover' ? (accessLink[2] ?? null) : null;
+if (accessLink) history.replaceState(history.state, '', location.pathname + location.search);
 
 function HallIllustration() {
   const host = useRef<HTMLDivElement>(null);
@@ -52,11 +60,24 @@ function App() {
             Someone has been removing pages from the Royal Chronicle. The guild has a few questions.
           </p>
           <div className="access">
-            <h2>Guild access</h2>
-            <p>
-              The guild is invitation-only. Sign-in and invitation redemption are still in
-              development.
-            </p>
+            {apiUrl && publishableKey ? (
+              <Suspense fallback={<p role="status">Loading guild sign-in…</p>}>
+                <GuildAccess
+                  apiUrl={apiUrl}
+                  publishableKey={publishableKey}
+                  invitation={invitation}
+                  recovery={recovery}
+                />
+              </Suspense>
+            ) : (
+              <>
+                <h2>Guild access</h2>
+                <p>
+                  The guild is invitation-only. Sign-in will open when the guild server is
+                  connected.
+                </p>
+              </>
+            )}
           </div>
         </section>
         <HallIllustration />

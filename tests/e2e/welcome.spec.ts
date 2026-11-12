@@ -18,3 +18,11 @@ test('renders the welcome screen and hall at the GitHub Pages base path', async 
     page.viewportSize()?.width ?? 0,
   );
 });
+
+test('clears invitation and recovery fragments on arrival', async ({ page }) => {
+  for (const route of ['redeem', 'recover']) {
+    await page.goto('about:blank');
+    await page.goto(`./#/${route}/${'a'.repeat(43)}`);
+    await expect(page).toHaveURL(/\/documentation-guild\/$/);
+  }
+});

@@ -2,6 +2,7 @@ import type { D1Database } from '@cloudflare/workers-types';
 import { catalog } from '@guild/content';
 import { Hono } from 'hono';
 import { secureHeaders } from 'hono/secure-headers';
+import { accountRoutes } from './accounts/routes';
 
 type Bindings = { DB: D1Database };
 
@@ -24,6 +25,8 @@ app.get('/health', async (c) => {
   }
   return c.json({ status: 'unavailable' }, 503);
 });
+
+app.route('/api/v1', accountRoutes());
 
 app.notFound((c) => c.json({ error: { code: 'NOT_FOUND' } }, 404));
 

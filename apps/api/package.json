@@ -4,12 +4,15 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --local --ip 127.0.0.1",
-    "migrate:local": "wrangler d1 migrations apply DB --local"
+    "migrate:local": "wrangler d1 migrations apply DB --local",
+    "bootstrap:admin": "node scripts/bootstrap-admin.mjs"
   },
   "dependencies": {
+    "@clerk/backend": "3.27.0",
     "@guild/content": "workspace:*",
     "@guild/shared": "workspace:*",
-    "hono": "4.13.18"
+    "hono": "4.13.18",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20261112.1",

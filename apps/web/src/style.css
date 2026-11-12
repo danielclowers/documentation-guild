@@ -132,3 +132,165 @@ h1 {
     width: min(100%, 560px);
   }
 }
+
+.account-panel,
+.account-form,
+.character-fields,
+.invite-link {
+  display: grid;
+  gap: 12px;
+}
+
+.account-form label,
+.invite-link label {
+  display: grid;
+  gap: 5px;
+  color: #ead7bb;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.access input,
+.access select,
+.access button {
+  width: 100%;
+  min-height: 44px;
+  font: inherit;
+  color: #f6ead8;
+  border: 1px solid #80674d;
+  border-radius: 4px;
+  padding: 8px 10px;
+  background: #30271f;
+}
+
+.access button {
+  width: fit-content;
+  color: #241d16;
+  background: #e1b776;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.access button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.access :focus-visible {
+  outline: 2px solid #ffdfaa;
+  outline-offset: 3px;
+}
+.access [role='alert'] {
+  color: #ffb9aa;
+}
+.character-fields {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid #665039;
+  min-width: 0;
+}
+.character-fields legend {
+  padding: 0 4px;
+  color: #e1b776;
+}
+.character-options {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+.avatar-preview {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  background: #3a3026;
+}
+.avatar-sprite {
+  position: relative;
+  width: 32px;
+  height: 40px;
+  background: #292127;
+  clip-path: polygon(
+    25% 0,
+    75% 0,
+    75% 8%,
+    88% 8%,
+    88% 52%,
+    100% 52%,
+    100% 86%,
+    75% 86%,
+    75% 100%,
+    25% 100%,
+    25% 86%,
+    0 86%,
+    0 52%,
+    12% 52%,
+    12% 8%,
+    25% 8%
+  );
+}
+.avatar-sprite i {
+  position: absolute;
+  inset: 5px 6px auto;
+  height: 17px;
+  background: #d79d76;
+}
+.avatar-sprite i::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 9px;
+  width: 3px;
+  height: 3px;
+  background: #302830;
+  box-shadow: 9px 0 #302830;
+}
+.avatar-sprite b {
+  position: absolute;
+  inset: 3px 5px auto;
+  height: 8px;
+  background: var(--hair);
+}
+.avatar-sprite.hair-1 b {
+  clip-path: polygon(0 0, 100% 0, 100% 62%, 55% 62%, 55% 100%, 0 100%);
+}
+.avatar-sprite.hair-2 b {
+  height: 21px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 82% 100%, 82% 30%, 18% 30%, 18% 100%, 0 100%);
+}
+.avatar-sprite em {
+  position: absolute;
+  inset: 23px 3px auto;
+  height: 12px;
+  background: var(--tunic);
+  border-bottom: 3px solid #0003;
+}
+.profile-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.guild-admin {
+  border-top: 1px solid #665039;
+  padding-top: 12px;
+}
+.guild-admin summary {
+  cursor: pointer;
+  color: #e1b776;
+  font-weight: 650;
+}
+.invite-link {
+  margin: 12px 0;
+}
+.admin-list {
+  padding: 0;
+  list-style: none;
+}
+.admin-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}

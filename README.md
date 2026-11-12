@@ -1,6 +1,6 @@
 # The Documentation Guild
 
-An invitation-only multiplayer idle RPG for a small guild of technical writers. The first local milestone includes a React and Phaser welcome screen, a Cloudflare Worker health endpoint and a D1 membership schema. The launch catalog is available to server code with schema and cross-reference validation.
+An invitation-only multiplayer idle RPG for a small guild of technical writers. The welcome screen uses React and Phaser. The Cloudflare Worker handles invitation-only membership, character profiles, and account recovery with Clerk and D1. The launch catalog is available to server code with schema and cross-reference validation.
 
 ## Local development
 
