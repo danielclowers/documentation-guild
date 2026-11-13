@@ -112,6 +112,8 @@ export function useHallConnection(apiUrl: string, request: AccountApi) {
       activity();
       if (socket.current?.readyState === WebSocket.OPEN) socket.current.send('active');
     };
+    const onLeave = () => socket.current?.close(1000, 'Page closed');
+    window.addEventListener('pagehide', onLeave);
     document.addEventListener('visibilitychange', onVisible);
     void connect();
     return () => {
@@ -122,6 +124,7 @@ export function useHallConnection(apiUrl: string, request: AccountApi) {
       window.removeEventListener('pointerdown', activity);
       window.removeEventListener('keydown', activity);
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pagehide', onLeave);
       socket.current?.close();
       socket.current = null;
     };

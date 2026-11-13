@@ -98,16 +98,18 @@ export class GuildRoom {
     if (path === '/settle' && request.method === 'POST') {
       const { memberId, skill } = await request.json<{ memberId: string; skill?: Skill }>();
       const now = Date.now();
-      const connectedSince = this.connections(now).find(
-        ([, data]) => data.character.id === memberId,
-      )?.[1].arrivalAt;
+      const sessions = this.connections(now)
+        .map(([, data]) => data)
+        .filter((data) => data.character.id === memberId);
+      const connectedSince = sessions[0]?.arrivalAt;
+      const confirmedAt = Math.max(...sessions.map((session) => session.lastSeen));
       const changed = await settleStandingOrder(this.env.DB, memberId, {
-        now,
+        now: skill || connectedSince === undefined ? now : confirmedAt,
         connectedSince,
         skill,
       });
       if (changed && connectedSince !== undefined) await this.refresh([memberId]);
-      return new Response(null, { status: 204 }) as unknown as WorkerResponse;
+      return Response.json({ connectedSince }) as unknown as WorkerResponse;
     }
     if (path === '/update' && request.method === 'POST') {
       const { memberId, revoked } = await request.json<{ memberId: string; revoked: boolean }>();
@@ -127,11 +129,6 @@ export class GuildRoom {
       return new Response(null, { status: 401 }) as unknown as WorkerResponse;
     const claimed = await this.claimTicket(token, origin);
     const now = Date.now();
-    if (claimed) {
-      const since = this.connections(now).find(([, data]) => data.character.id === claimed.id)?.[1]
-        .arrivalAt;
-      await settleStandingOrder(this.env.DB, claimed.id, { now, connectedSince: since ?? now });
-    }
     const [character] = claimed ? await hallCharacters(this.env.DB, [claimed.id]) : [];
     if (!character) return new Response(null, { status: 401 }) as unknown as WorkerResponse;
 
@@ -210,14 +207,17 @@ export class GuildRoom {
     socket.send('{"type":"pong"}');
   }
 
-  async webSocketClose(socket: WorkerSocket) {
+  async webSocketClose(socket: WorkerSocket, code: number, _reason?: string, wasClean?: boolean) {
     const now = Date.now();
     const data = attachment(socket);
     const connections = this.connections(now).filter(([other]) => other !== socket);
     this.send(connections, { type: 'roster', members: this.roster(connections, now) });
     if (data && !connections.some(([, other]) => other.character.id === data.character.id)) {
       await settleStandingOrder(this.env.DB, data.character.id, {
-        now: Math.min(now, data.lastSeen + HEARTBEAT_TIMEOUT, data.authUntil),
+        now:
+          code === 4000 || wasClean === false || now >= data.lastSeen + HEARTBEAT_TIMEOUT
+            ? data.lastSeen
+            : Math.min(now, data.authUntil),
         connectedSince: data.arrivalAt,
         checkpoint: true,
       });
@@ -226,7 +226,7 @@ export class GuildRoom {
 
   async webSocketError(socket: WorkerSocket) {
     socket.close(1011, 'Connection interrupted');
-    await this.webSocketClose(socket);
+    await this.webSocketClose(socket, 1011, undefined, false);
   }
 
   private async refresh(ids: string[], revoked = false) {
@@ -251,15 +251,20 @@ export class GuildRoom {
 
   async alarm() {
     const now = Date.now();
-    const members = new Map(
-      this.connections(now).map(([, data]) => [data.character.id, data.arrivalAt]),
-    );
+    const members = new Map<string, Connection>();
+    for (const [, data] of this.connections(now)) {
+      const id = data.character.id;
+      if ((members.get(id)?.lastSeen ?? 0) < data.lastSeen) members.set(id, data);
+    }
     const ids = [...members.keys()];
     if (!ids.length) return;
     await this.state.storage.setAlarm(now + REFRESH_INTERVAL);
     await Promise.all(
-      [...members].map(([id, connectedSince]) =>
-        settleStandingOrder(this.env.DB, id, { now, connectedSince }),
+      [...members].map(([id, data]) =>
+        settleStandingOrder(this.env.DB, id, {
+          now: data.lastSeen,
+          connectedSince: data.arrivalAt,
+        }),
       ),
     );
     await this.refresh(ids);

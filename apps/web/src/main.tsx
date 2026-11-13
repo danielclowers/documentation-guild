@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { HelpPage } from './help';
 import { HallCanvas } from './hall/canvas';
 import { createRoot } from 'react-dom/client';
 import './style.css';
@@ -13,13 +14,26 @@ if (accessLink) history.replaceState(history.state, '', location.pathname + loca
 
 function App() {
   const [inside, setInside] = useState(false);
+  const [help, setHelp] = useState(() => location.hash === '#/help');
+  useEffect(() => {
+    const navigate = () => setHelp(location.hash === '#/help');
+    window.addEventListener('hashchange', navigate);
+    return () => window.removeEventListener('hashchange', navigate);
+  }, []);
+  useEffect(() => {
+    if (help) document.getElementById('help-title')?.focus();
+  }, [help]);
   return (
     <div className="page">
       <header className="brand">
         <span className="book-mark" aria-hidden="true" />
         <span>The Unwritten Chronicle</span>
+        <a className="help-nav" href={help ? '#/' : '#/help'}>
+          {help ? 'Guild' : 'Help & FAQ'}
+        </a>
       </header>
-      <main className={inside ? 'welcome welcome-inside' : 'welcome'}>
+      {help && <HelpPage />}
+      <main hidden={help} className={inside ? 'welcome welcome-inside' : 'welcome'}>
         <section className="intro" aria-labelledby="title">
           <h1 id="title" className={inside ? 'hall-page-title' : undefined}>
             The Documentation Guild

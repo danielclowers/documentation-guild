@@ -212,3 +212,46 @@ it('gates tickets, synchronizes three members, deduplicates tabs and disconnects
   await expect.poll(() => ada.roster()?.map(({ id }) => id)).toEqual(['ada']);
   expect((await request('/realtime/ticket', { method: 'POST', id: 'bea' })).status).toBe(403);
 }, 20_000);
+
+it('pauses the order only after the last hall connection closes', async () => {
+  const first = await connect('cal');
+  const second = await connect('cal');
+  const order = () =>
+    request('/me', { id: 'cal' }).then(async (response) => {
+      expect(response.status).toBe(200);
+      return ((await response.json()) as import('../../packages/shared/src').GuildProfile).character
+        ?.progression.order;
+    });
+  expect(
+    (await request('/me/standing-order', { id: 'cal', method: 'PUT', body: { skill: 'Research' } }))
+      .status,
+  ).toBe(200);
+  const db = await runtime.getD1Database('DB');
+  await db
+    .prepare("UPDATE standing_orders SET research_ms = 120000 WHERE character_id = 'character_cal'")
+    .run();
+  first.socket.close(1000);
+  expect(await order()).toMatchObject({ running: true });
+  second.socket.close(1000);
+  await expect.poll(async () => (await order())?.running).toBe(false);
+  const paused = await order();
+  expect(paused?.remainingMs).toBeGreaterThan(175_000);
+  expect(paused?.remainingMs).toBeLessThanOrEqual(180_000);
+  await db
+    .prepare(
+      "UPDATE standing_orders SET accounted_at = accounted_at - 86400000 WHERE character_id = 'character_cal'",
+    )
+    .run();
+  expect(await order()).toEqual(paused);
+  const resumed = await connect('cal');
+  const running = await order();
+  expect(running?.running).toBe(true);
+  expect(running?.remainingMs).toBeGreaterThan(175_000);
+  expect(running?.remainingMs).toBeLessThanOrEqual(paused?.remainingMs ?? 0);
+  expect(
+    await db
+      .prepare("SELECT COUNT(*) AS count FROM reward_ledger WHERE character_id = 'character_cal'")
+      .first('count'),
+  ).toBe(0);
+  resumed.socket.close(1000);
+}, 20_000);

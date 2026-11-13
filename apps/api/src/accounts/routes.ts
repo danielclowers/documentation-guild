@@ -88,7 +88,11 @@ async function parseBody<T>(c: Context<AccountEnv>, schema: z.ZodType<T>) {
   }
 }
 
-async function getProfile(db: D1Database, member: Membership): Promise<GuildProfile> {
+async function getProfile(
+  db: D1Database,
+  member: Membership,
+  connectedSince?: number,
+): Promise<GuildProfile> {
   const character = await db
     .prepare(
       `SELECT id, display_name AS displayName, hair_style AS hairStyle,
@@ -102,7 +106,7 @@ async function getProfile(db: D1Database, member: Membership): Promise<GuildProf
     character: character && {
       ...character,
       level: characterLevel(character.xp),
-      progression: await characterProgression(db, character.id),
+      progression: await characterProgression(db, character.id, connectedSince),
     },
   };
 }
@@ -284,26 +288,26 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
   });
 
   members.get('/me', async (c) => {
-    await settleGuildMember(c.env, c.var.member.id);
-    return c.json(await getProfile(c.env.DB, c.var.member));
+    const connectedSince = await settleGuildMember(c.env, c.var.member.id);
+    return c.json(await getProfile(c.env.DB, c.var.member, connectedSince));
   });
 
   members.put('/me/standing-order', async (c) => {
     const input = await parseBody(c, z.strictObject({ skill: skillSchema }));
     if (!input) return c.json({ error: { code: 'INVALID_INPUT' } }, 400);
-    await settleGuildMember(c.env, c.var.member.id, input.skill);
-    return c.json(await getProfile(c.env.DB, c.var.member));
+    const connectedSince = await settleGuildMember(c.env, c.var.member.id, input.skill);
+    return c.json(await getProfile(c.env.DB, c.var.member, connectedSince));
   });
   members.post('/me/training/:key', async (c) => {
     const key = z.enum(trainingKeys).safeParse(c.req.param('key'));
     const input = await parseBody(c, z.strictObject({ expectedRank: z.int().min(0).max(2) }));
     if (!key.success || !input) return c.json({ error: { code: 'INVALID_INPUT' } }, 400);
     const member = c.var.member;
-    await settleGuildMember(c.env, member.id);
+    const connectedSince = await settleGuildMember(c.env, member.id);
     if (!(await purchaseTraining(c.env.DB, member.id, key.data, input.expectedRank))) {
       return c.json({ error: { code: 'TRAINING_UNAVAILABLE' } }, 409);
     }
-    return c.json(await getProfile(c.env.DB, member));
+    return c.json(await getProfile(c.env.DB, member, connectedSince));
   });
 
   members.post('/me/specialization', async (c) => {
@@ -315,11 +319,11 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
     if (!input || input.specialization === input.expected)
       return c.json({ error: { code: 'INVALID_INPUT' } }, 400);
     const member = c.var.member;
-    await settleGuildMember(c.env, member.id);
+    const connectedSince = await settleGuildMember(c.env, member.id);
     if (!(await chooseSpecialization(c.env.DB, member.id, input.specialization, input.expected))) {
       return c.json({ error: { code: 'SPECIALIZATION_UNAVAILABLE' } }, 409);
     }
-    return c.json(await getProfile(c.env.DB, member));
+    return c.json(await getProfile(c.env.DB, member, connectedSince));
   });
 
   members.get('/business', async (c) => {
@@ -353,7 +357,8 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
       .bind(crypto.randomUUID(), displayName, hairStyle, hairColor, tunicColor, c.var.member.id)
       .run();
     await notifyHall(c.env, c.var.member.id).catch(() => undefined);
-    return c.json(await getProfile(c.env.DB, c.var.member));
+    const connectedSince = await settleGuildMember(c.env, c.var.member.id);
+    return c.json(await getProfile(c.env.DB, c.var.member, connectedSince));
   });
 
   members.use('/admin/*', async (c, next) => {

@@ -26,3 +26,13 @@ test('clears invitation and recovery fragments on arrival', async ({ page }) => 
     await expect(page).toHaveURL(/\/documentation-guild\/$/);
   }
 });
+
+test('opens the FAQ and returns to the guild', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('link', { name: 'Help & FAQ' }).press('Enter');
+  await expect(page.getByRole('heading', { name: 'Help & FAQ' })).toBeFocused();
+  await page.getByText('What happens when I close the game?', { exact: true }).click();
+  await expect(page.getByText('Closing your last connected tab', { exact: false })).toBeVisible();
+  await page.getByRole('link', { name: 'Back to the guild' }).click();
+  await expect(page.getByRole('heading', { name: 'The Documentation Guild' })).toBeVisible();
+});

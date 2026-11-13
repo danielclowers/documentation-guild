@@ -5,7 +5,7 @@
 | 0. Verify and scaffold | Local workspace, welcome screen, initial D1 migration, content validation, test runners and CI/Pages workflows |
 | 1. Secure invitations and accounts | Invites, Clerk sign-in UI, profile setup, suspension and recovery implemented. D1 and token validation passed locally. The preview admin confirmed hosted sign-in and character creation. |
 | 2. Shared guild hall | Authenticated WebSocket roster, one avatar per member, station walks, waves and accessible roster available in the hosted preview. Expedition activity and standing-order production are later milestones. |
-| 3. Standing orders and progression | Server-authoritative standing orders, character XP, three skill tracks and gold. Four gold-funded training upgrades, six specializations, and the Chronicler standing-order perk. Guild Business and expedition perks will take effect when those activities are added. |
+| 3. Standing orders and progression | Connected-only standing orders with saved partial cycles, character XP, three skill tracks and gold. Four gold-funded training upgrades, six specializations, and the Chronicler standing-order perk. Guild Business and expedition perks will take effect when those activities are added. |
 | 4. Guild Business | Three-slot solo case board, all twelve launch cases, four puzzle types, server-side grading, optional discoveries, and rolling reward limits. |
 | 5. Cooperative expeditions | Pending. |
 | 6. Story, content and polish | Story seed validated. Campaign play and journal pending. |
@@ -23,3 +23,5 @@ The GitHub CLI and SSH both verified `danielclowers`. The project repository is 
 - All nine archived files matched the copies in `docs/spec` byte for byte. A search of the built frontend found no catalog markers or sample puzzle data.
 
 The public GitHub repository uses GitHub Actions to publish the frontend from `main`. The Cloudflare preview handles accounts, membership and realtime hall connections. [Live welcome screen](https://danielclowers.github.io/documentation-guild/)
+
+Standing orders now earn only during a hall connection, per the updated product decision. Existing credited rewards and saved partial cycles carry forward. The Help & FAQ link opens a separate view while keeping the hall connected.

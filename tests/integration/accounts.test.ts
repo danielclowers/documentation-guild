@@ -7,11 +7,7 @@ import type { IdentityProvider, ProvisionedUser } from '../../apps/api/src/accou
 import { hashInvite, type invitationState } from '../../apps/api/src/accounts/invitations';
 import { accountRoutes } from '../../apps/api/src/accounts/routes';
 import { settleStandingOrder } from '../../apps/api/src/progression/standing-orders';
-import {
-  characterXpForLevel,
-  offlineStandingOrderLimit,
-  standingOrderInterval,
-} from '../../packages/shared/src';
+import { characterXpForLevel, standingOrderInterval } from '../../packages/shared/src';
 
 const origin = 'http://localhost:5173';
 const issuer = 'https://guild.example.test';
@@ -391,37 +387,54 @@ it('settles one payout across concurrent requests and carries each skill’s par
   });
 });
 
-it('caps a seven-day absence across repeated settlements, then credits connected time', async () => {
-  const { memberId } = await progressionMember();
-  const start = Date.now() - 7 * offlineStandingOrderLimit;
-  await settleStandingOrder(db, memberId, { now: start, skill: 'Restoration' });
-  await settleStandingOrder(db, memberId, { now: start + offlineStandingOrderLimit / 2 });
-  await settleStandingOrder(db, memberId, { now: start + 5 * offlineStandingOrderLimit });
-  const returnAt = start + 7 * offlineStandingOrderLimit;
-  await settleStandingOrder(db, memberId, { now: returnAt, connectedSince: returnAt });
-  expect(await db.prepare('SELECT gold, total_xp FROM characters').first()).toEqual({
-    gold: 576,
-    total_xp: 864,
+it('pauses with three minutes left, earns nothing while away, and resumes the saved cycle', async () => {
+  const { memberId, read } = await progressionMember();
+  const minute = 60_000;
+  const start = Date.now() - 7 * 24 * 60 * minute;
+  const closedAt = start + 2 * minute;
+  const returnAt = Date.now();
+  await settleStandingOrder(db, memberId, { now: start, skill: 'Research' });
+  await settleStandingOrder(db, memberId, {
+    now: closedAt,
+    connectedSince: start,
+    checkpoint: true,
+  });
+  await settleStandingOrder(db, memberId, { now: returnAt - minute });
+  expect(await read()).toMatchObject({
+    character: {
+      xp: 0,
+      gold: 0,
+      progression: { order: { skill: 'Research', remainingMs: 180_000, running: false } },
+    },
   });
   await settleStandingOrder(db, memberId, {
-    now: returnAt + standingOrderInterval,
+    now: returnAt + 3 * minute - 1,
     connectedSince: returnAt,
   });
-  expect(await db.prepare('SELECT gold, total_xp FROM characters').first()).toEqual({
-    gold: 578,
-    total_xp: 867,
+  expect(await db.prepare('SELECT COUNT(*) AS count FROM reward_ledger').first('count')).toBe(0);
+  await Promise.all(
+    [1, 2].map(() =>
+      settleStandingOrder(db, memberId, {
+        now: returnAt + 3 * minute,
+        connectedSince: returnAt,
+      }),
+    ),
+  );
+  expect(await read()).toMatchObject({
+    character: {
+      xp: 3,
+      gold: 2,
+      progression: { skills: { Research: { xp: 5 } } },
+    },
   });
-  expect(await db.prepare('SELECT xp FROM character_skills').first('xp')).toBe(1445);
 });
 
-it('does not apply the offline cap to continuous hall presence', async () => {
+it('continues earning during uninterrupted hall presence', async () => {
   const { memberId } = await progressionMember();
-  const start = Date.now() - 2 * offlineStandingOrderLimit;
+  const twoDays = 2 * 24 * 60 * 60_000;
+  const start = Date.now() - twoDays;
   await settleStandingOrder(db, memberId, { now: start, skill: 'Scribing' });
-  await settleStandingOrder(db, memberId, {
-    now: start + 2 * offlineStandingOrderLimit,
-    connectedSince: start,
-  });
+  await settleStandingOrder(db, memberId, { now: start + twoDays, connectedSince: start });
   expect(await db.prepare('SELECT total_xp FROM characters').first('total_xp')).toBe(1728);
 });
 
@@ -469,6 +482,10 @@ it('settles before choosing Chronicler and enforces the paid specialization cool
     .prepare('UPDATE characters SET total_xp = ?, gold = 500')
     .bind(characterXpForLevel(10))
     .run();
+  await settleStandingOrder(db, memberId, {
+    now: start + 8 * standingOrderInterval,
+    connectedSince: start,
+  });
   expect((await choose('Chronicler', null)).status).toBe(200);
   expect(await db.prepare('SELECT gold FROM characters').first('gold')).toBe(524);
   const settled = await db

@@ -1,16 +1,19 @@
 import { skillSchema, standingOrders } from '@guild/shared';
 import type { GuildProfile, Skill } from '@guild/shared';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { HelpTip } from '../help';
 import { accountError, type AccountApi } from './api';
 
 export function StandingOrders({
   character,
   request,
   onChange,
+  hallConnected,
 }: {
   character: NonNullable<GuildProfile['character']>;
   request: AccountApi;
   onChange: (profile: GuildProfile) => void;
+  hallConnected: boolean;
 }) {
   const { order, skills, latestReward } = character.progression;
   const [choice, setChoice] = useState<Skill | ''>('');
@@ -39,7 +42,13 @@ export function StandingOrders({
 
   return (
     <section className="standing-orders" aria-labelledby="standing-order-title">
-      <h3 id="standing-order-title">Standing order</h3>
+      <div className="help-heading">
+        <h3 id="standing-order-title">Standing order</h3>
+        <HelpTip topic="Standing orders">
+          Choose an assignment and leave the hall open. Closing your last connected tab pauses the
+          cycle. You pick up where you left off when you return.
+        </HelpTip>
+      </div>
       <p>
         {order
           ? `Working on ${order.skill}`
@@ -78,22 +87,14 @@ export function StandingOrders({
       {selection === 'Scribing' && character.progression.specialization === 'Chronicler' && (
         <p>Chronicler adds 10% gold, rounded down per payout.</p>
       )}
-      {order?.nextRewardAt != null && (
-        <p>
-          Next payout around{' '}
-          {new Date(order.nextRewardAt).toLocaleTimeString([], {
-            hour: 'numeric',
-            minute: '2-digit',
-          })}
-        </p>
-      )}
+      {order && <PayoutTimer key={order.skill} order={order} hallConnected={hallConnected} />}
       {latestReward && (
         <p>
           Last payout · {latestReward.skill}: +{latestReward.xp} XP, +{latestReward.skillXp} skill
           XP, +{latestReward.gold} gold
         </p>
       )}
-      <p>Earn up to 24 hours while away.</p>
+      <p>Earn while connected to the hall, even when idle.</p>
       <h3>Skills</h3>
       <ul>
         {skillSchema.options.map((skill) => (
@@ -103,5 +104,38 @@ export function StandingOrders({
         ))}
       </ul>
     </section>
+  );
+}
+
+function PayoutTimer({
+  order,
+  hallConnected,
+}: {
+  order: NonNullable<NonNullable<GuildProfile['character']>['progression']['order']>;
+  hallConnected: boolean;
+}) {
+  const running = order.running && hallConnected;
+  const [seconds, setSeconds] = useState(() => Math.ceil(order.remainingMs / 1000));
+  useEffect(() => {
+    if (order.running && !hallConnected) return;
+    const receivedAt = performance.now();
+    const tick = () => {
+      const elapsed = running ? performance.now() - receivedAt : 0;
+      setSeconds(Math.max(0, Math.ceil((order.remainingMs - elapsed) / 1000)));
+    };
+    tick();
+    if (!running) return;
+    const interval = window.setInterval(tick, 1000);
+    return () => window.clearInterval(interval);
+  }, [order, running, hallConnected]);
+  const duration = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  return (
+    <p className="order-timer">
+      {running
+        ? seconds > 0
+          ? `Next payout in ${duration}`
+          : 'Confirming payout…'
+        : `Paused · ${duration} remaining`}
+    </p>
   );
 }

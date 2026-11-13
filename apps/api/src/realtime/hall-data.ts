@@ -38,10 +38,14 @@ export async function notifyHall(env: HallBindings, memberId: string, revoked = 
 
 export async function settleGuildMember(env: HallBindings, memberId: string, skill?: Skill) {
   const room = guildRoom(env);
-  if (!room) return settleStandingOrder(env.DB, memberId, { skill });
+  if (!room) {
+    await settleStandingOrder(env.DB, memberId, { skill });
+    return undefined;
+  }
   const response = await room.fetch('https://guild-room.internal/settle', {
     method: 'POST',
     body: JSON.stringify({ memberId, skill }),
   });
   if (!response.ok) throw new Error('Standing order settlement unavailable');
+  return (await response.json<{ connectedSince?: number }>()).connectedSince;
 }

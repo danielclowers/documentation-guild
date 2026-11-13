@@ -2,7 +2,6 @@ import type { HallStation } from './hall';
 import type { Skill } from './index';
 
 export const standingOrderInterval = 5 * 60_000;
-export const offlineStandingOrderLimit = 24 * 60 * 60_000;
 
 export const standingOrders = {
   Scribing: { station: 'Scriptorium', xp: 3, skillXp: 5, gold: 3 },
@@ -14,7 +13,7 @@ export interface CharacterProgression {
   training: Partial<Record<TrainingKey, number>>;
   specialization: Specialization | null;
   canSwitchAt: number | null;
-  order: { skill: Skill; nextRewardAt: number | null } | null;
+  order: { skill: Skill; remainingMs: number; running: boolean } | null;
   skills: Record<Skill, { xp: number; level: number }>;
   latestReward: { skill: Skill; xp: number; skillXp: number; gold: number; at: number } | null;
 }

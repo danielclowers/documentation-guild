@@ -1,6 +1,5 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import {
-  offlineStandingOrderLimit,
   specializationCooldown,
   skillLevel,
   skillSchema,
@@ -19,7 +18,6 @@ type OrderState = {
   character_id: string;
   skill: Skill;
   accounted_at: number;
-  offline_ms: number;
   suspended_at: number | null;
   version: number;
   specialization: Specialization | null;
@@ -27,16 +25,11 @@ type OrderState = {
 
 export function orderAccrual(order: OrderState, now: number, connectedSince?: number) {
   const end = Math.max(order.accounted_at, Math.min(now, order.suspended_at ?? now));
-  const offlineEnd = Math.min(end, Math.max(order.accounted_at, connectedSince ?? end));
-  const offline = Math.min(
-    offlineStandingOrderLimit - order.offline_ms,
-    offlineEnd - order.accounted_at,
-  );
-  const elapsed = order[timeColumns[order.skill]] + offline + end - offlineEnd;
+  const start = Math.max(order.accounted_at, connectedSince ?? end);
+  const elapsed = order[timeColumns[order.skill]] + Math.max(0, end - start);
   return {
     end,
-    offline:
-      connectedSince !== undefined && now >= order.accounted_at ? 0 : order.offline_ms + offline,
+    elapsed,
     units: Math.floor(elapsed / standingOrderInterval),
     remainder: elapsed % standingOrderInterval,
   };
@@ -89,10 +82,7 @@ export async function settleStandingOrder(
     }
     const next = orderAccrual(current, now, connectedSince);
     const switching = skill !== undefined && skill !== current.skill;
-    const needsCheckpoint =
-      connectedSince !== undefined &&
-      (current.offline_ms > 0 || connectedSince > current.accounted_at || checkpoint);
-    if (!switching && !next.units && !needsCheckpoint) return false;
+    if (!switching && !next.units && !checkpoint) return false;
     const batch = [];
     if (next.units) {
       const rate = standingOrders[current.skill];
@@ -123,14 +113,13 @@ export async function settleStandingOrder(
     batch.push(
       db
         .prepare(
-          `UPDATE standing_orders SET skill = ?, accounted_at = ?, offline_ms = ?,
+          `UPDATE standing_orders SET skill = ?, accounted_at = ?,
       ${timeColumns[current.skill]} = ?, version = version + 1 WHERE character_id = ? AND version = ?
       AND EXISTS (SELECT 1 FROM members WHERE id = ? AND status = 'active')`,
         )
         .bind(
           skill ?? current.skill,
           next.end,
-          next.offline,
           next.remainder,
           current.character_id,
           current.version,
@@ -155,6 +144,7 @@ export async function settleStandingOrder(
 export async function characterProgression(
   db: D1Database,
   characterId: string,
+  connectedSince?: number,
 ): Promise<CharacterProgression> {
   const [orderResult, skillResult, rewardResult, trainingResult, specResult] = await db.batch([
     db.prepare('SELECT * FROM standing_orders WHERE character_id = ?').bind(characterId),
@@ -192,10 +182,11 @@ export async function characterProgression(
     order: order
       ? {
           skill: order.skill,
-          nextRewardAt:
-            order.suspended_at === null
-              ? order.accounted_at + standingOrderInterval - order[timeColumns[order.skill]]
-              : null,
+          remainingMs: Math.max(
+            0,
+            standingOrderInterval - orderAccrual(order, Date.now(), connectedSince).elapsed,
+          ),
+          running: connectedSince !== undefined && order.suspended_at === null,
         }
       : null,
     skills,

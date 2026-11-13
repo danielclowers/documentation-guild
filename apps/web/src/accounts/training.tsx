@@ -10,6 +10,7 @@ import {
 } from '@guild/shared';
 import type { GuildProfile, Specialization, TrainingKey } from '@guild/shared';
 import { useState } from 'react';
+import { HelpTip } from '../help';
 import { accountError, type AccountApi } from './api';
 
 export function Training({
@@ -60,7 +61,13 @@ export function Training({
   return (
     <details className="guild-admin training">
       <summary>Training &amp; specialization</summary>
-      <h3>Training</h3>
+      <div className="help-heading">
+        <h3>Training</h3>
+        <HelpTip topic="Training">
+          Spend gold to buy up to three permanent ranks per upgrade. Training stays with you if you
+          change specialization.
+        </HelpTip>
+      </div>
       {character.level < trainingLevel && <p>Unlocks at level {trainingLevel}.</p>}
       <ul>
         {trainingKeys.map((key) => {

@@ -1,6 +1,7 @@
 import { hallStations } from '@guild/shared';
 import type { HallStation } from '@guild/shared';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { HelpTip } from '../help';
 import { accountError, type AccountApi } from '../accounts/api';
 import { HallCanvas } from './canvas';
 import { useHallConnection } from './connection';
@@ -9,12 +10,18 @@ export function LiveHall({
   apiUrl,
   request,
   memberId,
+  onConnection,
 }: {
   apiUrl: string;
   request: AccountApi;
   memberId: string;
+  onConnection: (connected: boolean) => void;
 }) {
   const { members, status, wave, sendWave } = useHallConnection(apiUrl, request);
+  useEffect(() => {
+    onConnection(status === 'connected');
+    return () => onConnection(false);
+  }, [onConnection, status]);
   const [reducedMotion, setReducedMotion] = useState(
     () => matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
@@ -66,6 +73,10 @@ export function LiveHall({
             ))}
           </select>
         </label>
+        <HelpTip topic="Hall station">
+          Move your avatar around the hall. To change the skill you earn XP in, choose a Standing
+          order.
+        </HelpTip>
         <button type="button" disabled={!own} onClick={sendWave}>
           Wave
         </button>

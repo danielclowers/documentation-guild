@@ -19,7 +19,7 @@ The roster includes authenticated members who have a current hall connection. Mu
 
 ## Standing orders
 
-Members start a standing order from the character panel. One complete five-minute cycle pays character XP, XP in the selected skill and gold. Switching settles the old order before changing stations. Each skill retains its unfinished cycle. The server caps disconnected earning time at 24 hours and records each payout in the reward ledger. Apply `0005_standing_orders.sql` before deploying a Worker that uses this feature.
+Members start a standing order from the character panel. One complete five-minute cycle pays character XP, XP in the selected skill and gold. Switching settles the old order before changing stations. Each skill retains its unfinished cycle. Standing orders count connected time, including idle time. Closing the last tab saves the unfinished cycle. If a connection drops without a clean close, the server counts time through the last confirmed heartbeat. The reward ledger records each payout. Apply `0005_standing_orders.sql` before deploying a Worker that uses this feature.
 
 ## Training and specialization
 

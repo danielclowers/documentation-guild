@@ -1,7 +1,7 @@
 import { ClerkProvider, useAuth, useClerk, useSignIn } from '@clerk/react';
 import { characterSchema, passwordSchema, usernameSchema } from '@guild/shared';
 import type { GuildProfile } from '@guild/shared';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { accountApi, accountError, GuildApiError } from './api';
 import { AdminPanel } from './admin';
@@ -164,6 +164,7 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
   const { signOut } = useClerk();
   const request = useMemo(() => accountApi(apiUrl, getToken), [apiUrl, getToken]);
   const [profile, setProfile] = useState<GuildProfile>();
+  const [hallConnected, setHallConnected] = useState(false);
   const progressVersion = useRef(0);
   function updateProgress(next: GuildProfile) {
     progressVersion.current++;
@@ -189,6 +190,8 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
     return () => controller.abort();
   }, [isSignedIn, request, revision]);
 
+  const updateHallConnection = useCallback((connected: boolean) => setHallConnected(connected), []);
+
   useEffect(() => {
     if (!isSignedIn || !profile?.character) return;
     let pending = false;
@@ -213,7 +216,8 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
         pending = false;
       }
     };
-    const timer = window.setInterval(() => void refresh(), 30_000);
+    if (hallConnected) void refresh();
+    const timer = window.setInterval(() => void refresh(), 15_000);
     const onVisible = () => void refresh();
     document.addEventListener('visibilitychange', onVisible);
     return () => {
@@ -221,7 +225,7 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [isSignedIn, Boolean(profile?.character), request]);
+  }, [isSignedIn, Boolean(profile?.character), request, hallConnected]);
 
   async function save(event: FormEvent) {
     event.preventDefault();
@@ -318,7 +322,12 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
           </div>
         )}
         {character && (
-          <StandingOrders character={character} request={request} onChange={updateProgress} />
+          <StandingOrders
+            character={character}
+            request={request}
+            onChange={updateProgress}
+            hallConnected={hallConnected}
+          />
         )}
         {character && (
           <Training character={character} request={request} onChange={updateProgress} />
@@ -344,7 +353,12 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
         </button>
       </div>
       {inside && profile && (
-        <LiveHall apiUrl={apiUrl} request={request} memberId={profile.memberId} />
+        <LiveHall
+          apiUrl={apiUrl}
+          request={request}
+          memberId={profile.memberId}
+          onConnection={updateHallConnection}
+        />
       )}
     </div>
   );

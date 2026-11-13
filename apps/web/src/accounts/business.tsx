@@ -7,6 +7,7 @@ import type {
   GuildProfile,
 } from '@guild/shared';
 import { useCallback, useEffect, useState } from 'react';
+import { HelpTip } from '../help';
 import { accountError, type AccountApi } from './api';
 
 const choiceLabels: Record<BusinessChoiceKind, string> = {
@@ -232,6 +233,13 @@ export function GuildBusiness({
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary>Guild Business</summary>
+      <div className="help-heading">
+        <span>Personal cases</span>
+        <HelpTip topic="Guild Business">
+          Cases refill as you finish them. The first eight payouts in a rolling 24-hour window pay
+          full rewards.
+        </HelpTip>
+      </div>
       {reward && (
         <div className="business-reward" role="status">
           Case complete · +{reward.xp} XP · +{reward.gold} gold
