@@ -370,7 +370,15 @@ it('locks a manual roster at four, animates departure and pays everyone after di
 });
 
 it('honors scheduled departures, a single grace period, and manual abandonment', async () => {
-  const db = await expeditionMembers('slead', 'ssecond', 'glead', 'gsecond', 'elead', 'alead');
+  const db = await expeditionMembers(
+    'slead',
+    'ssecond',
+    'glead',
+    'gsecond',
+    'glate',
+    'elead',
+    'alead',
+  );
   const scheduled = await createExpedition('slead', 5, 'forgotten_archives');
   expect((await expeditionAction('ssecond', scheduled, 'join', expeditionRole)).status).toBe(200);
   expect((await expeditionAction('slead', scheduled, 'start')).status).toBe(409);
@@ -405,8 +413,12 @@ it('honors scheduled departures, a single grace period, and manual abandonment',
     graceUntil: due + 15 * minute,
   });
   expect((await expeditionAction('glead', grace, 'reschedule', { delay: 5 })).status).toBe(409);
-  expect((await expeditionAction('gsecond', grace, 'join', expeditionRole)).status).toBe(200);
-  expect(await boardParty('gsecond', grace)).toMatchObject({ state: 'running' });
+  const graceJoins = await Promise.all(
+    ['gsecond', 'glate'].map((id) => expeditionAction(id, grace, 'join', expeditionRole)),
+  );
+  expect(graceJoins.map(({ status }) => status).sort()).toEqual([200, 409]);
+  expect(await boardParty('glead', grace)).toMatchObject({ state: 'running' });
+  expect((await boardParty('glead', grace))?.roster).toHaveLength(2);
   await db
     .prepare('UPDATE expedition_parties SET grace_until = ? WHERE id = ?')
     .bind(due, expiring)
@@ -419,15 +431,18 @@ it('honors scheduled departures, a single grace period, and manual abandonment',
 });
 
 it('keeps post-return events personal and awards shared bonuses once under retries', async () => {
-  const db = await expeditionMembers('olead', 'osecond', 'othird', 'outsider2');
+  const { roll } = await import('../../apps/api/src/expeditions/content');
+  const db = await expeditionMembers('olead', 'osecond', 'othird', 'ofourth', 'outsider2');
   const party = await createExpedition('olead', null, 'forgotten_archives');
-  for (const id of ['osecond', 'othird'])
+  for (const id of ['osecond', 'othird', 'ofourth'])
     expect((await expeditionAction(id, party, 'join', expeditionRole)).status).toBe(200);
   expect((await expeditionAction('olead', party, 'start')).status).toBe(200);
   const finished = Date.now() - minute;
+  let seed = 0;
+  while (roll(seed, 'shared-discover') % 100 >= 15) seed++;
   await db
-    .prepare('UPDATE expedition_parties SET started_at = ?, ends_at = ? WHERE id = ?')
-    .bind(finished - 20 * minute, finished, party)
+    .prepare('UPDATE expedition_parties SET started_at = ?, ends_at = ?, seed = ? WHERE id = ?')
+    .bind(finished - 20 * minute, finished, seed, party)
     .run();
   await runExpeditionCron();
   const eligible = await boardParty('olead', party);
@@ -450,19 +465,30 @@ it('keeps post-return events personal and awards shared bonuses once under retri
   const second = await boardParty('osecond', party);
   expect(first?.report?.sharedRenown).toBe(second?.report?.sharedRenown);
   expect(first?.report?.sharedRenown).toBe(
-    65 + (first?.events[0]?.result?.renown ?? 0) + (second?.events[0]?.result?.renown ?? 0),
+    80 + (first?.events[0]?.result?.renown ?? 0) + (second?.events[0]?.result?.renown ?? 0),
   );
   const shared = await db
     .prepare('SELECT shared_bonus, shared_discovery FROM expedition_parties WHERE id = ?')
     .bind(party)
     .first();
   expect(shared).toEqual({ shared_bonus: 20, shared_discovery: 0 });
+  expect((await expeditionAction('othird', party, 'event', choice)).status).toBe(200);
+  expect((await expeditionAction('othird', party, 'event', choice)).status).toBe(409);
+  expect((await boardParty('olead', party))?.report?.discovery).toBeTypeOf('string');
+  expect(
+    await db
+      .prepare(
+        "SELECT COUNT(*) FROM personal_discoveries WHERE source_type = 'expedition_shared' AND source_id = ?",
+      )
+      .bind(party)
+      .first('COUNT(*)'),
+  ).toBe(4);
   await db
     .prepare('UPDATE expedition_parties SET ends_at = ? WHERE id = ?')
     .bind(finished - 24 * 60 * minute, party)
     .run();
-  expect((await expeditionAction('othird', party, 'event', choice)).status).toBe(409);
-  expect((await boardParty('othird', party))?.events[0]?.options).toEqual([]);
+  expect((await expeditionAction('ofourth', party, 'event', choice)).status).toBe(409);
+  expect((await boardParty('ofourth', party))?.events[0]?.options).toEqual([]);
 });
 
 it('preserves partial standing orders through the expedition and an offline interval', async () => {
