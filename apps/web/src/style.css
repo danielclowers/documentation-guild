@@ -444,3 +444,66 @@ h1 {
 .training button {
   margin-top: 6px;
 }
+
+.business-list,
+.business-sequence {
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.business-list small,
+.business-form small {
+  display: block;
+  color: #ddc5a6;
+}
+.business-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+.business-form h4 {
+  margin: 0;
+  color: #e1b776;
+}
+.business-sequence li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.business-sequence strong {
+  min-width: 22px;
+}
+.business-form fieldset {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid #665039;
+}
+.business-form fieldset label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+}
+.business-form input[type='radio'] {
+  width: 1.1rem;
+  min-height: 1.1rem;
+  flex: none;
+}
+.business-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.business-tiles button {
+  width: 100%;
+  padding: 6px 4px;
+}
+.business-tiles button[aria-pressed='true'] {
+  outline: 2px solid #fff0d5;
+}
+.business-reward {
+  color: #ecd5ad;
+  margin: 8px 0;
+}

@@ -28,6 +28,8 @@ import {
 
 import { guildRoom, notifyHall, settleGuildMember, type HallBindings } from '../realtime/hall-data';
 import { characterProgression } from '../progression/standing-orders';
+import { businessAnswerSchema } from '../business/cases';
+import { businessBoard, submitBusinessCase } from '../business/business';
 import { chooseSpecialization, purchaseTraining } from '../progression/training';
 
 interface Bindings extends ClerkBindings, HallBindings {
@@ -318,6 +320,24 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
       return c.json({ error: { code: 'SPECIALIZATION_UNAVAILABLE' } }, 409);
     }
     return c.json(await getProfile(c.env.DB, member));
+  });
+
+  members.get('/business', async (c) => {
+    const cases = await businessBoard(c.env.DB, c.var.member.id);
+    if (!cases) return c.json({ error: { code: 'INVALID_STATE' } }, 409);
+    return c.json({ cases });
+  });
+
+  members.post('/business/:id/submit', async (c) => {
+    const input = await parseBody(c, businessAnswerSchema);
+    const id = z.uuid().safeParse(c.req.param('id'));
+    if (!input || !id.success) return c.json({ error: { code: 'INVALID_INPUT' } }, 400);
+    const memberId = c.var.member.id;
+    const result = await submitBusinessCase(c.env.DB, memberId, id.data, input);
+    if (!result) return c.json({ error: { code: 'NOT_FOUND' } }, 404);
+    if (result === 'invalid') return c.json({ error: { code: 'INVALID_INPUT' } }, 400);
+    if (result.status === 'completed') await notifyHall(c.env, memberId).catch(() => undefined);
+    return c.json(result);
   });
 
   members.patch('/me/character', async (c) => {

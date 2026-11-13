@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { accountApi, accountError, GuildApiError } from './api';
 import { AdminPanel } from './admin';
+import { GuildBusiness } from './business';
 import { Training } from './training';
 import { StandingOrders } from './standing-orders';
 import { PasswordSettings, RecoveryForm } from './password';
@@ -322,6 +323,7 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
         {character && (
           <Training character={character} request={request} onChange={updateProgress} />
         )}
+        {character && <GuildBusiness request={request} onChange={updateProgress} />}
         {profile && <PasswordSettings />}
         {profile?.role === 'admin' && <AdminPanel request={request} />}
         <button

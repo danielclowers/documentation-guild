@@ -118,6 +118,7 @@ beforeAll(async () => {
     '0004_hall_presence.sql',
     '0005_standing_orders.sql',
     '0006_character_training.sql',
+    '0007_guild_business.sql',
   ]) {
     const sql = await readFile(
       new URL(`../../apps/api/migrations/${migration}`, import.meta.url),
@@ -148,6 +149,8 @@ beforeEach(async () => {
   });
   await db.batch(
     [
+      'personal_discoveries',
+      'business_cases',
       'training_purchases',
       'reward_ledger',
       'character_skills',
@@ -488,4 +491,102 @@ it('settles before choosing Chronicler and enforces the paid specialization cool
   await db.prepare('UPDATE characters SET specialization_switched_at = 0').run();
   expect((await choose('Warden', 'Editor')).status).toBe(200);
   expect(await db.prepare('SELECT gold FROM characters').first('gold')).toBe(157);
+});
+
+it('serves all twelve case templates, records retries and awards a rolling eight full payouts', async () => {
+  const { auth } = await progressionMember();
+  type Case = import('../../packages/shared/src').BusinessCase;
+  const board = async () => {
+    const res = await call('/business', { auth });
+    expect(res.status).toBe(200);
+    return ((await res.json()) as { cases: Case[] }).cases;
+  };
+  const send = async (id: string, answer: import('../../packages/shared/src').BusinessAnswer) =>
+    call(`/business/${id}/submit`, { auth, method: 'POST', body: answer });
+  const [firstBoard, otherBoard] = await Promise.all([board(), board()]);
+  expect(firstBoard).toEqual(otherBoard);
+  expect(firstBoard).toHaveLength(3);
+  expect(JSON.stringify(firstBoard)).not.toMatch(/template_key|seed|solution/);
+  const tutorial = firstBoard[0];
+  if (tutorial?.type !== 'sequence') throw new Error('Missing tutorial');
+  expect(
+    (
+      await call(`/business/${tutorial.id}/submit`, {
+        auth: tokenFor('user_admin'),
+        method: 'POST',
+        body: { type: 'sequence', tiles: [1, 2, 3, 4] },
+      })
+    ).status,
+  ).toBe(404);
+  const wrong = () => send(tutorial.id, { type: 'sequence', tiles: tutorial.tiles });
+  for (let attempts = 1; attempts <= 3; attempts++) {
+    const response = await wrong();
+    expect(await response.json()).toMatchObject({ status: 'retry', attempts });
+    expect(await (await wrong()).json()).toMatchObject({ status: 'retry', attempts });
+    await db.prepare('UPDATE business_cases SET retry_at = 0 WHERE id = ?').bind(tutorial.id).run();
+  }
+  const titles = new Set<string>();
+  for (let index = 0; index < 12; index++) {
+    const cases = await board();
+    expect(cases).toHaveLength(3);
+    const item = cases[0]!;
+    titles.add(item.title);
+    let answer: import('../../packages/shared/src').BusinessAnswer;
+    if (item.type === 'sequence')
+      answer = { type: item.type, tiles: [...item.tiles].sort((a, b) => a - b) };
+    else if (item.type === 'matching') {
+      const pairs: [number, number][] = [];
+      for (const tile of new Set(item.tiles))
+        pairs.push([item.tiles.indexOf(tile), item.tiles.lastIndexOf(tile)]);
+      answer = { type: item.type, pairs };
+    } else {
+      const labels: Record<string, string> = {
+        'Three Conflicting Witnesses': 'open window',
+        'The Mysterious Ink Stains': 'windblown rain',
+        'Before the First Revision': 'C',
+      };
+      const option = item.options.find(({ label, effect }) =>
+        item.type === 'deduction' ? label === labels[item.title] : effect === 'renown_bonus',
+      );
+      if (!option) throw new Error('Missing choice');
+      answer = { type: item.type, option: option.id };
+    }
+    if (index === 3)
+      await db.prepare('UPDATE business_cases SET seed = 0 WHERE id = ?').bind(item.id).run();
+    const [one, two] = await Promise.all([send(item.id, answer), send(item.id, answer)]);
+    expect(one.status).toBe(200);
+    expect(two.status).toBe(200);
+    const result = await one.json();
+    expect(await two.json()).toEqual(result);
+    expect(result).toMatchObject({ status: 'completed' });
+    if (index === 0) expect(result).toMatchObject({ reward: { xp: 15, skillXp: 7, gold: 9 } });
+    if (index === 3)
+      expect(result).toMatchObject({
+        reward: { renown: 5, discovery: { title: expect.any(String) } },
+      });
+    if (index >= 8)
+      expect(result).toMatchObject({
+        reward: { xp: 5, skillXp: 0, gold: 2, renown: 0, discovery: null },
+      });
+  }
+  expect(titles.size).toBe(12);
+  expect(
+    await db
+      .prepare("SELECT COUNT(*) AS count FROM reward_ledger WHERE source_type = 'business'")
+      .first('count'),
+  ).toBe(12);
+  expect(await db.prepare('SELECT renown FROM guilds').first('renown')).toBe(10);
+  await db
+    .prepare(
+      "UPDATE reward_ledger SET awarded_at = 0 WHERE source_type = 'business' AND skill_xp > 0",
+    )
+    .run();
+  const next = (await board())[0];
+  if (next?.type !== 'sequence') throw new Error('Expected recycled tutorial template');
+  expect(
+    await (
+      await send(next.id, { type: 'sequence', tiles: [...next.tiles].sort((a, b) => a - b) })
+    ).json(),
+  ).toMatchObject({ reward: { xp: 20, skillXp: 10 } });
+  await db.prepare('UPDATE guilds SET renown = 0').run();
 });

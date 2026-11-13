@@ -24,3 +24,7 @@ Members start a standing order from the character panel. One complete five-minut
 ## Training and specialization
 
 Training opens at level 3 and costs 100, 200, and 350 gold per upgrade. The first specialization is free at level 10. Switching costs 200 gold and starts a 24-hour cooldown. Training and skill XP persist through switches. Chronicler applies to Scribing payouts now. Other perks apply when their Guild Business or expedition activity is available. Apply `0006_character_training.sql` before deploying the updated Worker.
+
+## Guild Business
+
+Members can open Guild Business in their character panel and choose among three personal cases. The board refills when a case is complete. The first eight full payouts in a rolling 24-hour window include skill XP and a discovery chance. Later cases stay playable for 5 character XP and 2 gold. Apply `0007_guild_business.sql` before deploying the updated Worker.
