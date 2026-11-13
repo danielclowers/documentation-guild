@@ -10,6 +10,7 @@ export const standingOrders = {
 } satisfies Record<Skill, { station: HallStation; xp: number; skillXp: number; gold: number }>;
 
 export interface CharacterProgression {
+  onExpedition: boolean;
   training: Partial<Record<TrainingKey, number>>;
   specialization: Specialization | null;
   canSwitchAt: number | null;

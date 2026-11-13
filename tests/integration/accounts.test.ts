@@ -115,6 +115,7 @@ beforeAll(async () => {
     '0005_standing_orders.sql',
     '0006_character_training.sql',
     '0007_guild_business.sql',
+    '0008_expeditions.sql',
   ]) {
     const sql = await readFile(
       new URL(`../../apps/api/migrations/${migration}`, import.meta.url),
@@ -145,6 +146,11 @@ beforeEach(async () => {
   });
   await db.batch(
     [
+      'expedition_invites',
+      'expedition_chronicle',
+      'expedition_events',
+      'expedition_members',
+      'expedition_parties',
       'personal_discoveries',
       'business_cases',
       'training_purchases',

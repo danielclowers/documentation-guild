@@ -9,6 +9,7 @@ import { GuildBusiness } from './business';
 import { Training } from './training';
 import { StandingOrders } from './standing-orders';
 import { PasswordSettings, RecoveryForm } from './password';
+import { Expeditions } from '../expeditions/board';
 import { LiveHall } from '../hall/live-hall';
 import { AvatarPreview, CharacterFields, startingAppearance } from './character';
 
@@ -331,6 +332,9 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
         )}
         {character && (
           <Training character={character} request={request} onChange={updateProgress} />
+        )}
+        {character && profile && (
+          <Expeditions request={request} profile={profile} onChange={updateProgress} />
         )}
         {character && <GuildBusiness request={request} onChange={updateProgress} />}
         {profile && <PasswordSettings />}

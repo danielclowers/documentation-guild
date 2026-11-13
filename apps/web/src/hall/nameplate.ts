@@ -99,6 +99,7 @@ export function hallNameplate(scene: Phaser.Scene) {
   const plate = scene.add.graphics().setDepth(500);
   let fallback: Phaser.GameObjects.Text | undefined;
   let currentText = '';
+  let usesFallback = false;
   let width = 0;
   let height = 12;
 
@@ -107,6 +108,7 @@ export function hallNameplate(scene: Phaser.Scene) {
       if (text !== currentText) {
         currentText = text;
         const bitmap = bitmapLayout(text);
+        usesFallback = !bitmap;
         if (bitmap) {
           fallback?.setVisible(false);
           width = bitmap.width + 6;
@@ -135,6 +137,10 @@ export function hallNameplate(scene: Phaser.Scene) {
       const top = bottom - height;
       plate.setPosition(left, top);
       fallback?.setPosition(left + 3, top + 2);
+    },
+    setVisible(visible: boolean) {
+      plate.setVisible(visible);
+      fallback?.setVisible(visible && usesFallback);
     },
     destroy() {
       plate.destroy();

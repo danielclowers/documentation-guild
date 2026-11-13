@@ -578,3 +578,41 @@ h1 {
 .order-timer {
   font-variant-numeric: tabular-nums;
 }
+
+.expeditions[open] {
+  display: grid;
+  gap: 10px;
+}
+.expeditions h3,
+.expedition-card h4,
+.expedition-event h5 {
+  margin: 8px 0;
+  color: #e1b776;
+}
+.expedition-card {
+  padding: 10px 0;
+  border-top: 1px solid #665039;
+}
+.expedition-card p,
+.expedition-card li {
+  font-size: 0.875rem;
+}
+.expedition-card button {
+  margin: 6px 4px 0 0;
+}
+.expedition-form,
+.expeditions label {
+  display: grid;
+  gap: 5px;
+}
+.expedition-form {
+  margin-top: 8px;
+}
+.expedition-event {
+  margin-top: 12px;
+  border-left: 2px solid #80674d;
+  padding-left: 8px;
+}
+.expedition-event small {
+  display: block;
+}

@@ -53,6 +53,8 @@ const messages: Record<string, string> = {
     'Training requires the listed level, gold, and current rank. Check your updated profile and try again.',
   SPECIALIZATION_UNAVAILABLE:
     'Check your level, gold, and when you can switch specializations again.',
+  EXPEDITION_CONFLICT:
+    'That expedition action is unavailable. Check the roster, departure time, level requirement, or your current party.',
   INVALID_STATE: 'This record has already changed. Refresh the list and try again.',
 };
 

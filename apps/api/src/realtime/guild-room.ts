@@ -93,8 +93,39 @@ export class GuildRoom {
       .first<{ id: string }>();
   }
 
+  private checkpointExpedition = async (members: string[], at: number) => {
+    const online = this.connections(Date.now()).map(([, data]) => data);
+    await Promise.all(
+      members.map(async (id) => {
+        const sessions = online.filter((data) => data.character.id === id);
+        if (!sessions.length) return;
+        const confirmedAt = Math.max(...sessions.map(({ lastSeen }) => lastSeen));
+        await settleStandingOrder(this.env.DB, id, {
+          now: Math.min(at, confirmedAt),
+          connectedSince: sessions[0]!.arrivalAt,
+          reconcile: false,
+        });
+      }),
+    );
+  };
+
   async fetch(request: Request): Promise<WorkerResponse> {
     const path = new URL(request.url).pathname;
+    if (path === '/absence' && request.method === 'POST') {
+      const { memberId, before } = await request.json<{ memberId: string; before: number }>();
+      const online = this.connections(Date.now()).some(
+        ([, data]) => data.character.id === memberId,
+      );
+      const lastSeen = await this.state.storage.get<number>('last-seen:' + memberId);
+      return Response.json({
+        absent: !online && (lastSeen ?? 0) <= before,
+      }) as unknown as WorkerResponse;
+    }
+    if (path === '/departure' && request.method === 'POST') {
+      const { members, at } = await request.json<{ members: string[]; at: number }>();
+      await this.checkpointExpedition(members, at);
+      return new Response(null, { status: 204 }) as unknown as WorkerResponse;
+    }
     if (path === '/settle' && request.method === 'POST') {
       const { memberId, skill } = await request.json<{ memberId: string; skill?: Skill }>();
       const now = Date.now();
@@ -107,6 +138,7 @@ export class GuildRoom {
         now: skill || connectedSince === undefined ? now : confirmedAt,
         connectedSince,
         skill,
+        beforeDeparture: this.checkpointExpedition,
       });
       if (changed && connectedSince !== undefined) await this.refresh([memberId]);
       return Response.json({ connectedSince }) as unknown as WorkerResponse;
@@ -213,13 +245,18 @@ export class GuildRoom {
     const connections = this.connections(now).filter(([other]) => other !== socket);
     this.send(connections, { type: 'roster', members: this.roster(connections, now) });
     if (data && !connections.some(([, other]) => other.character.id === data.character.id)) {
+      const key = 'last-seen:' + data.character.id;
+      const end =
+        code === 4000 || wasClean === false || now >= data.lastSeen + HEARTBEAT_TIMEOUT
+          ? data.lastSeen
+          : Math.min(now, data.authUntil);
+      const last = await this.state.storage.get<number>(key);
+      if ((last ?? 0) < end) await this.state.storage.put(key, end);
       await settleStandingOrder(this.env.DB, data.character.id, {
-        now:
-          code === 4000 || wasClean === false || now >= data.lastSeen + HEARTBEAT_TIMEOUT
-            ? data.lastSeen
-            : Math.min(now, data.authUntil),
+        now: end,
         connectedSince: data.arrivalAt,
         checkpoint: true,
+        beforeDeparture: this.checkpointExpedition,
       });
     }
   }
@@ -264,6 +301,7 @@ export class GuildRoom {
         settleStandingOrder(this.env.DB, id, {
           now: data.lastSeen,
           connectedSince: data.arrivalAt,
+          beforeDeparture: this.checkpointExpedition,
         }),
       ),
     );

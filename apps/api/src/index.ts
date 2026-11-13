@@ -2,6 +2,8 @@ import type { D1Database } from '@cloudflare/workers-types';
 import { catalog } from '@guild/content';
 import { Hono } from 'hono';
 import { secureHeaders } from 'hono/secure-headers';
+import { reconcileExpeditions } from './expeditions/parties';
+import { checkpointExpedition, type HallBindings } from './realtime/hall-data';
 import { accountRoutes } from './accounts/routes';
 
 export { GuildRoom } from './realtime/guild-room';
@@ -33,4 +35,8 @@ app.route('/api/v1', accountRoutes());
 
 app.notFound((c) => c.json({ error: { code: 'NOT_FOUND' } }, 404));
 
-export default app;
+export default {
+  fetch: app.fetch,
+  scheduled: (_controller: unknown, env: HallBindings) =>
+    reconcileExpeditions(env.DB, Date.now(), undefined, checkpointExpedition(env)),
+};

@@ -7,6 +7,7 @@ export interface HallMember extends CharacterAppearance {
   id: string;
   level: number;
   station: HallStation;
+  expeditionAt?: number;
   presence: 'active' | 'idle';
   arrivalAt: number;
   stationAt: number;

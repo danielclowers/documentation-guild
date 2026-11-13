@@ -6,6 +6,7 @@ import {
   standingOrderInterval,
   standingOrders,
 } from '@guild/shared';
+import { reconcileExpeditions, type BeforeDeparture } from '../expeditions/parties';
 import type { CharacterProgression, Skill, Specialization, TrainingKey } from '@guild/shared';
 
 const timeColumns = {
@@ -23,16 +24,30 @@ type OrderState = {
   specialization: Specialization | null;
 } & Record<(typeof timeColumns)[Skill], number>;
 
-export function orderAccrual(order: OrderState, now: number, connectedSince?: number) {
+export function orderAccrual(order: OrderState, now: number, connectedSince?: number, awayMs = 0) {
   const end = Math.max(order.accounted_at, Math.min(now, order.suspended_at ?? now));
   const start = Math.max(order.accounted_at, connectedSince ?? end);
-  const elapsed = order[timeColumns[order.skill]] + Math.max(0, end - start);
+  const elapsed = order[timeColumns[order.skill]] + Math.max(0, end - start - awayMs);
   return {
     end,
     elapsed,
     units: Math.floor(elapsed / standingOrderInterval),
     remainder: elapsed % standingOrderInterval,
   };
+}
+
+async function expeditionOverlap(db: D1Database, characterId: string, start: number, end: number) {
+  if (start >= end) return 0;
+  return (
+    (await db
+      .prepare(
+        `SELECT COALESCE(SUM(MIN(p.ends_at, ?) - MAX(p.started_at, ?)), 0) AS duration
+    FROM expedition_members e JOIN expedition_parties p ON p.id = e.party_id
+    WHERE e.character_id = ? AND e.snapshot IS NOT NULL AND p.started_at < ? AND p.ends_at > ?`,
+      )
+      .bind(end, start, characterId, end, start)
+      .first<number>('duration')) ?? 0
+  );
 }
 
 export async function settleStandingOrder(
@@ -43,13 +58,18 @@ export async function settleStandingOrder(
     connectedSince,
     skill,
     checkpoint = false,
+    beforeDeparture,
+    reconcile = true,
   }: {
     now?: number;
     connectedSince?: number;
     skill?: Skill;
     checkpoint?: boolean;
+    beforeDeparture?: BeforeDeparture;
+    reconcile?: boolean;
   } = {},
 ): Promise<boolean> {
+  if (reconcile) await reconcileExpeditions(db, now, undefined, beforeDeparture);
   for (let attempt = 0; attempt < 8; attempt++) {
     const current = await db
       .prepare(
@@ -80,7 +100,14 @@ export async function settleStandingOrder(
       if (insert?.meta.changes) return true;
       continue;
     }
-    const next = orderAccrual(current, now, connectedSince);
+    const start = Math.max(current.accounted_at, connectedSince ?? now);
+    const away = await expeditionOverlap(
+      db,
+      current.character_id,
+      start,
+      Math.min(now, current.suspended_at ?? now),
+    );
+    const next = orderAccrual(current, now, connectedSince, away);
     const switching = skill !== undefined && skill !== current.skill;
     if (!switching && !next.units && !checkpoint) return false;
     const batch = [];
@@ -175,7 +202,26 @@ export async function characterProgression(
   const training = (trainingResult?.results ?? []) as { key: TrainingKey; rank: number }[];
   const spec = specResult?.results[0] as
     { specialization: Specialization | null; switchedAt: number | null } | undefined;
+  const now = Date.now();
+  const away = order
+    ? await expeditionOverlap(
+        db,
+        characterId,
+        Math.max(order.accounted_at, connectedSince ?? now),
+        now,
+      )
+    : 0;
+  const onExpedition = Boolean(
+    await db
+      .prepare(
+        `SELECT 1 FROM expedition_members e JOIN expedition_parties p ON p.id = e.party_id
+    WHERE e.character_id = ? AND e.snapshot IS NOT NULL AND p.state = 'running' AND p.ends_at > ?`,
+      )
+      .bind(characterId, now)
+      .first(),
+  );
   return {
+    onExpedition,
     training: Object.fromEntries(training.map(({ key, rank }) => [key, rank])),
     specialization: spec?.specialization ?? null,
     canSwitchAt: spec?.switchedAt == null ? null : spec.switchedAt + specializationCooldown,
@@ -184,9 +230,9 @@ export async function characterProgression(
           skill: order.skill,
           remainingMs: Math.max(
             0,
-            standingOrderInterval - orderAccrual(order, Date.now(), connectedSince).elapsed,
+            standingOrderInterval - orderAccrual(order, now, connectedSince, away).elapsed,
           ),
-          running: connectedSince !== undefined && order.suspended_at === null,
+          running: connectedSince !== undefined && order.suspended_at === null && !onExpedition,
         }
       : null,
     skills,

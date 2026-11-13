@@ -87,6 +87,7 @@ export function StandingOrders({
       {selection === 'Scribing' && character.progression.specialization === 'Chronicler' && (
         <p>Chronicler adds 10% gold, rounded down per payout.</p>
       )}
+      {character.progression.onExpedition && <p>Standing order paused during your expedition.</p>}
       {order && <PayoutTimer key={order.skill} order={order} hallConnected={hallConnected} />}
       {latestReward && (
         <p>

@@ -62,7 +62,7 @@ export function LiveHall({
           Hall station
           <select
             value={own?.station ?? 'Lounge'}
-            disabled={!own || busy}
+            disabled={!own || Boolean(own.expeditionAt) || busy}
             onChange={(event) => {
               const station = hallStations.find((item) => item === event.currentTarget.value);
               if (station) void selectStation(station);
@@ -111,7 +111,7 @@ export function LiveHall({
                   {member.id === memberId && ' (you)'}
                 </summary>
                 <span>
-                  Level {member.level} · {member.station} ·{' '}
+                  Level {member.level} · {member.expeditionAt ? 'On expedition' : member.station} ·{' '}
                   {member.presence === 'idle' ? 'Idle' : 'Online'}
                 </span>
               </details>

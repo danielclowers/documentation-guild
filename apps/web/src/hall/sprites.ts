@@ -35,6 +35,7 @@ const desks: Record<HallStation, Point[]> = {
 };
 
 function destination(member: HallMember, peers: HallMember[]): Point {
+  if (member.expeditionAt) return ENTRANCE;
   const rank = peers.filter(
     (peer) => peer.station === member.station && peer.slot < member.slot,
   ).length;
@@ -76,6 +77,7 @@ export function hallSprites(scene: Phaser.Scene) {
       to: Point;
       from: Point;
       at: number;
+      away: boolean;
     }
   >();
   return ({ members, reducedMotion, wave }: HallVisualState) => {
@@ -98,16 +100,25 @@ export function hallSprites(scene: Phaser.Scene) {
           to,
           from: ENTRANCE,
           at: Math.max(member.arrivalAt, member.stationAt),
+          away: Boolean(member.expeditionAt),
         };
         sprites.set(member.id, sprite);
-      } else if (sprite.to.x !== to.x || sprite.to.y !== to.y) {
+      } else if (
+        sprite.away !== Boolean(member.expeditionAt) ||
+        sprite.to.x !== to.x ||
+        sprite.to.y !== to.y
+      ) {
         sprite.from = animate(sprite.from, sprite.to, now - sprite.at).point;
         sprite.to = to;
+        sprite.away = Boolean(member.expeditionAt);
         sprite.at = now;
       }
       const { point, walking } = reducedMotion
         ? { point: to, walking: false }
         : animate(sprite.from, sprite.to, now - sprite.at);
+      sprite.drawing.setVisible(!sprite.away || walking);
+      sprite.label.setVisible(!sprite.away || walking);
+      if (sprite.away && !walking) continue;
       const phase = reducedMotion
         ? 0
         : Math.floor((now + member.slot * 317) / (walking ? 105 : 470)) % 2;

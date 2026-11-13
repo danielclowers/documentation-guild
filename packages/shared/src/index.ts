@@ -35,3 +35,5 @@ export * from './hall';
 export * from './progression';
 
 export * from './business';
+
+export * from './expeditions';

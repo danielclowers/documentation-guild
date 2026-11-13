@@ -23,8 +23,16 @@ Members start a standing order from the character panel. One complete five-minut
 
 ## Training and specialization
 
-Training opens at level 3 and costs 100, 200, and 350 gold per upgrade. The first specialization is free at level 10. Switching costs 200 gold and starts a 24-hour cooldown. Training and skill XP persist through switches. Chronicler applies to Scribing payouts now. Other perks apply when their Guild Business or expedition activity is available. Apply `0006_character_training.sql` before deploying the updated Worker.
+Training opens at level 3 and costs 100, 200, and 350 gold per upgrade. The first specialization is free at level 10. Switching costs 200 gold and starts a 24-hour cooldown. Training and skill XP persist through switches. Each specialization applies to the activity described on the training panel. Apply `0006_character_training.sql` before deploying the updated Worker.
 
 ## Guild Business
 
 Members can open Guild Business in their character panel and choose among three personal cases. The board refills when a case is complete. The first eight full payouts in a rolling 24-hour window include skill XP and a discovery chance. Later cases stay playable for 5 character XP and 2 gold. Apply `0007_guild_business.sql` before deploying the updated Worker.
+
+## Cooperative expeditions
+
+An active guild member can create a party at the Expedition Board and invite other members. Joining selects a role and approach and reserves one of four spots. A manual party can depart with two ready players and closes after 24 hours. Another member can claim manual leadership after five minutes of leader absence. A scheduled party departs at its assigned time with two ready players, or enters one 15-minute extension. A second eligible join during the extension launches the party immediately.
+
+The Worker records departure and return times. Disconnects preserve the roster, and the scheduled Worker credits eligible party members on return even when the hall is empty. Connected standing orders pause during the expedition and keep their partial cycles. Guild Business remains available. Individual bonus challenges open during the run and stay available for 24 hours after return. Optional results and shared rewards appear in each member's report.
+
+If an expedition is unrecoverable, a guild admin can end it from the board. The Worker releases the roster, ends the standing-order pause, and records `expedition.failed` in the audit log. Completed optional rewards remain credited. Expeditions have no entry fee. Check Worker Cron Trigger logs and `/health` if scheduled parties appear stuck.

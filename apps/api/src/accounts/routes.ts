@@ -26,11 +26,29 @@ import {
   redeemInvitation,
 } from './invitations';
 
-import { guildRoom, notifyHall, settleGuildMember, type HallBindings } from '../realtime/hall-data';
+import {
+  checkpointExpedition,
+  guildRoom,
+  notifyHall,
+  settleGuildMember,
+  type HallBindings,
+} from '../realtime/hall-data';
 import { characterProgression } from '../progression/standing-orders';
 import { businessAnswerSchema } from '../business/cases';
 import { businessBoard, submitBusinessCase } from '../business/business';
 import { chooseSpecialization, purchaseTraining } from '../progression/training';
+
+import { expeditionBoard } from '../expeditions/board';
+import {
+  closeParty,
+  createParty,
+  depart,
+  findParty,
+  joinParty,
+  reconcileExpeditions,
+} from '../expeditions/parties';
+import { inviteToParty, leaveParty, rescheduleParty, transferParty } from '../expeditions/actions';
+import { resolveEvent } from '../expeditions/events';
 
 interface Bindings extends ClerkBindings, HallBindings {
   WEB_URL?: string;
@@ -324,6 +342,117 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
       return c.json({ error: { code: 'SPECIALIZATION_UNAVAILABLE' } }, 409);
     }
     return c.json(await getProfile(c.env.DB, member, connectedSince));
+  });
+
+  const roleInput = z.object({ role: skillSchema, approach: z.string().max(32) });
+  const delayInput = z.union([z.literal(5), z.literal(10), z.literal(15)]);
+  members.get('/expeditions', async (c) => {
+    const now = Date.now();
+    await reconcileExpeditions(c.env.DB, now, undefined, checkpointExpedition(c.env));
+    return c.json(await expeditionBoard(c.env.DB, c.var.member.id, now));
+  });
+  members.post('/expeditions', async (c) => {
+    const input = await parseBody(
+      c,
+      roleInput.extend({ mission: z.string().max(48), delay: delayInput.nullable() }).strict(),
+    );
+    if (!input) return c.json({ error: { code: 'INVALID_INPUT' } }, 400);
+    const now = Date.now();
+    await reconcileExpeditions(c.env.DB, now, undefined, checkpointExpedition(c.env));
+    const id = await createParty(
+      c.env.DB,
+      c.var.member.id,
+      input.mission,
+      input.role,
+      input.approach,
+      input.delay,
+      now,
+    );
+    if (!id) return c.json({ error: { code: 'EXPEDITION_CONFLICT' } }, 409);
+    return c.json({ id }, 201);
+  });
+  const partyAction = z.discriminatedUnion('action', [
+    roleInput.extend({ action: z.literal('join') }).strict(),
+    z.strictObject({ action: z.enum(['leave', 'start', 'cancel', 'transfer', 'fail']) }),
+    z.strictObject({ action: z.literal('reschedule'), delay: delayInput }),
+    z.strictObject({ action: z.literal('invite'), memberId: z.string().max(64) }),
+    z.strictObject({
+      action: z.enum(['event', 'retry']),
+      slot: z.int().min(0).max(1),
+      option: z.string().max(32),
+    }),
+  ]);
+  members.post('/expeditions/:id', async (c) => {
+    const id = z.uuid().safeParse(c.req.param('id'));
+    const input = await parseBody(c, partyAction);
+    if (!id.success || !input) return c.json({ error: { code: 'INVALID_INPUT' } }, 400);
+    const { DB } = c.env;
+    const member = c.var.member.id;
+    const now = Date.now();
+    await reconcileExpeditions(DB, now, undefined, checkpointExpedition(c.env));
+    const party = await findParty(DB, id.data);
+    if (!party) return c.json({ error: { code: 'NOT_FOUND' } }, 404);
+    let ok: boolean;
+    switch (input.action) {
+      case 'join':
+        ok = await joinParty(DB, party.id, member, input.role, input.approach, now);
+        if (ok) await reconcileExpeditions(DB, now, party.id, checkpointExpedition(c.env));
+        break;
+      case 'leave':
+        ok = await leaveParty(DB, party.id, member, now);
+        break;
+      case 'start':
+        ok = await depart(DB, party, now, member, checkpointExpedition(c.env));
+        break;
+      case 'cancel':
+        ok = await closeParty(DB, party.id, now, 'cancelled', member);
+        break;
+      case 'fail':
+        ok =
+          c.var.member.role === 'admin' && (await closeParty(DB, party.id, now, 'failed', member));
+        break;
+      case 'reschedule':
+        ok = await rescheduleParty(DB, party.id, member, input.delay, now);
+        break;
+      case 'invite':
+        ok = await inviteToParty(DB, party.id, member, input.memberId);
+        break;
+      case 'event':
+      case 'retry':
+        ok = await resolveEvent(
+          DB,
+          party.id,
+          member,
+          input.slot,
+          input.option,
+          now,
+          input.action === 'retry',
+        );
+        break;
+      case 'transfer': {
+        const before = now - 300_000;
+        const room = guildRoom(c.env);
+        const response = await room?.fetch('https://guild-room.internal/absence', {
+          method: 'POST',
+          body: JSON.stringify({ memberId: party.leader_id, before }),
+        });
+        const presence = await response?.json<{ absent: boolean }>();
+        ok =
+          Boolean(presence?.absent) &&
+          (await transferParty(DB, party.id, member, party.leader_id, now, before));
+        break;
+      }
+    }
+    if (!ok) return c.json({ error: { code: 'EXPEDITION_CONFLICT' } }, 409);
+    if (input.action === 'start' || input.action === 'join' || input.action === 'fail') {
+      const { results } = await DB.prepare(
+        'SELECT member_id FROM expedition_members WHERE party_id = ? AND snapshot IS NOT NULL',
+      )
+        .bind(party.id)
+        .all<{ member_id: string }>();
+      await Promise.allSettled(results.map(({ member_id }) => notifyHall(c.env, member_id)));
+    }
+    return c.json(await expeditionBoard(DB, member, now));
   });
 
   members.get('/business', async (c) => {

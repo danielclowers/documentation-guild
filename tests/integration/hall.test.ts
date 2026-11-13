@@ -255,3 +255,365 @@ it('pauses the order only after the last hall connection closes', async () => {
   ).toBe(0);
   resumed.socket.close(1000);
 }, 20_000);
+
+type Board = import('../../packages/shared/src').ExpeditionBoard;
+const minute = 60_000;
+const expeditionRole = { role: 'Scribing', approach: 'careful' };
+
+async function expeditionMembers(...ids: string[]) {
+  const db = await runtime.getD1Database('DB');
+  await db.batch(
+    ids.flatMap((id) => [
+      db
+        .prepare(
+          `INSERT INTO members (id,guild_id,clerk_user_id,auth_username,role,status,joined_at)
+      VALUES (?,'documentation-guild',?,?,'member','active',0)`,
+        )
+        .bind(id, `user_${id}`, id),
+      db
+        .prepare(
+          `INSERT INTO characters (id,member_id,display_name,hair_style,hair_color,tunic_color)
+      VALUES (?,?,?,0,0,0)`,
+        )
+        .bind(`character_${id}`, id, id),
+    ]),
+  );
+  return db;
+}
+
+async function createExpedition(id: string, delay: number | null, mission = 'missing_pages') {
+  const response = await request('/expeditions', {
+    id,
+    method: 'POST',
+    body: { ...expeditionRole, mission, delay },
+  });
+  expect(response.status).toBe(201);
+  return ((await response.json()) as { id: string }).id;
+}
+
+const expeditionAction = (id: string, party: string, action: string, values = {}) =>
+  request(`/expeditions/${party}`, { id, method: 'POST', body: { action, ...values } });
+
+async function boardParty(id: string, party: string) {
+  const response = await request('/expeditions', { id });
+  expect(response.status).toBe(200);
+  return ((await response.json()) as Board).parties.find((entry) => entry.id === party);
+}
+
+async function runExpeditionCron() {
+  const worker = await runtime.getWorker();
+  const result = await worker.scheduled({ cron: '* * * * *' });
+  expect(result.outcome).toBe('ok');
+}
+
+it('locks a manual roster at four, animates departure and pays everyone after disconnect', async () => {
+  const db = await expeditionMembers('mlead', 'msecond', 'mthird', 'mfourth', 'mfifth');
+  expect((await request('/expeditions')).status).toBe(401);
+  const lead = await connect('mlead');
+  const other = await connect('msecond');
+  const party = await createExpedition('mlead', null);
+  expect((await expeditionAction('mlead', party, 'start')).status).toBe(409);
+  expect((await expeditionAction('mlead', party, 'invite', { memberId: 'msecond' })).status).toBe(
+    200,
+  );
+  expect(await boardParty('msecond', party)).toMatchObject({ invited: true });
+  expect(
+    (await expeditionAction('msecond', party, 'join', { role: 'Research', approach: 'careful' }))
+      .status,
+  ).toBe(200);
+  expect((await expeditionAction('msecond', party, 'start')).status).toBe(409);
+  expect((await expeditionAction('mthird', party, 'join', expeditionRole)).status).toBe(200);
+  const last = await Promise.all(
+    ['mfourth', 'mfifth'].map((id) => expeditionAction(id, party, 'join', expeditionRole)),
+  );
+  expect(last.map(({ status }) => status).sort()).toEqual([200, 409]);
+  const alternate = await createExpedition(last[0]!.ok ? 'mfifth' : 'mfourth', null);
+  expect((await expeditionAction('msecond', alternate, 'join', expeditionRole)).status).toBe(409);
+  expect((await expeditionAction('mlead', party, 'start')).status).toBe(200);
+  expect((await expeditionAction('msecond', party, 'leave')).status).toBe(409);
+  await expect
+    .poll(() => lead.roster()?.find(({ id }) => id === 'msecond')?.expeditionAt)
+    .toBeTypeOf('number');
+  const launched = await boardParty('mlead', party);
+  expect(launched?.roster).toHaveLength(4);
+  expect((launched?.endsAt ?? 0) - (launched?.startedAt ?? 0)).toBe(10 * minute);
+  expect(
+    (await expeditionAction('mlead', party, 'event', { slot: 0, option: 'option_1' })).status,
+  ).toBe(409);
+  lead.socket.close(1000);
+  other.socket.close(1000);
+  await db
+    .prepare('UPDATE expedition_parties SET started_at = ?, ends_at = ? WHERE id = ?')
+    .bind(Date.now() - 11 * minute, Date.now() - minute, party)
+    .run();
+  await Promise.all([runExpeditionCron(), runExpeditionCron()]);
+  const returned = await boardParty('msecond', party);
+  expect(returned).toMatchObject({
+    state: 'completed',
+    report: { reward: { xp: 60, skillXp: 20, gold: 35, renown: 10 }, sharedRenown: 40 },
+  });
+  expect(
+    await db
+      .prepare(
+        "SELECT COUNT(*) FROM reward_ledger WHERE source_type = 'expedition' AND source_id = ?",
+      )
+      .bind(party)
+      .first('COUNT(*)'),
+  ).toBe(4);
+  expect(
+    await db
+      .prepare(
+        "SELECT xp FROM character_skills WHERE character_id = 'character_msecond' AND skill = 'Research'",
+      )
+      .first('xp'),
+  ).toBe(20);
+});
+
+it('honors scheduled departures, a single grace period, and manual abandonment', async () => {
+  const db = await expeditionMembers('slead', 'ssecond', 'glead', 'gsecond', 'elead', 'alead');
+  const scheduled = await createExpedition('slead', 5, 'forgotten_archives');
+  expect((await expeditionAction('ssecond', scheduled, 'join', expeditionRole)).status).toBe(200);
+  expect((await expeditionAction('slead', scheduled, 'start')).status).toBe(409);
+  await runExpeditionCron();
+  expect(await boardParty('slead', scheduled)).toMatchObject({ state: 'recruiting' });
+
+  const grace = await createExpedition('glead', 5);
+  const expiring = await createExpedition('elead', 5);
+  const stale = await createExpedition('alead', null);
+  const due = Date.now() - 1000;
+  await db.batch([
+    db
+      .prepare('UPDATE expedition_parties SET scheduled_at = ? WHERE id IN (?, ?, ?)')
+      .bind(due, scheduled, grace, expiring),
+    db
+      .prepare('UPDATE expedition_parties SET created_at = ? WHERE id = ?')
+      .bind(due - 24 * 60 * minute, stale),
+  ]);
+  await runExpeditionCron();
+  expect(await boardParty('slead', scheduled)).toMatchObject({
+    state: 'running',
+    startedAt: due,
+    endsAt: due + 20 * minute,
+  });
+  expect(await boardParty('glead', grace)).toMatchObject({
+    state: 'grace',
+    graceUntil: due + 15 * minute,
+  });
+  await runExpeditionCron();
+  expect(await boardParty('glead', grace)).toMatchObject({
+    state: 'grace',
+    graceUntil: due + 15 * minute,
+  });
+  expect((await expeditionAction('glead', grace, 'reschedule', { delay: 5 })).status).toBe(409);
+  expect((await expeditionAction('gsecond', grace, 'join', expeditionRole)).status).toBe(200);
+  expect(await boardParty('gsecond', grace)).toMatchObject({ state: 'running' });
+  await db
+    .prepare('UPDATE expedition_parties SET grace_until = ? WHERE id = ?')
+    .bind(due, expiring)
+    .run();
+  await runExpeditionCron();
+  expect(await boardParty('elead', expiring)).toMatchObject({ state: 'expired' });
+  expect(await boardParty('alead', stale)).toMatchObject({ state: 'expired' });
+  expect((await expeditionAction('elead', expiring, 'start')).status).toBe(409);
+  expect(await createExpedition('elead', null)).toBeTypeOf('string');
+});
+
+it('keeps post-return events personal and awards shared bonuses once under retries', async () => {
+  const db = await expeditionMembers('olead', 'osecond', 'othird', 'outsider2');
+  const party = await createExpedition('olead', null, 'forgotten_archives');
+  for (const id of ['osecond', 'othird'])
+    expect((await expeditionAction(id, party, 'join', expeditionRole)).status).toBe(200);
+  expect((await expeditionAction('olead', party, 'start')).status).toBe(200);
+  const finished = Date.now() - minute;
+  await db
+    .prepare('UPDATE expedition_parties SET started_at = ?, ends_at = ? WHERE id = ?')
+    .bind(finished - 20 * minute, finished, party)
+    .run();
+  await runExpeditionCron();
+  const eligible = await boardParty('olead', party);
+  expect(eligible?.events.length).toBeGreaterThanOrEqual(1);
+  expect(eligible?.events.length).toBeLessThanOrEqual(2);
+  expect(eligible?.events[0]).toMatchObject({
+    availableAt: finished - 12 * minute,
+    expiresAt: finished + 24 * 60 * minute,
+  });
+  expect(eligible?.events[0]?.options).toHaveLength(3);
+  expect(await boardParty('outsider2', party)).toBeUndefined();
+  const choice = { slot: 0, option: 'option_3' };
+  expect((await expeditionAction('outsider2', party, 'event', choice)).status).toBe(409);
+  const duplicate = await Promise.all(
+    [1, 2].map(() => expeditionAction('olead', party, 'event', choice)),
+  );
+  expect(duplicate.map(({ status }) => status).sort()).toEqual([200, 409]);
+  expect((await expeditionAction('osecond', party, 'event', choice)).status).toBe(200);
+  const first = await boardParty('olead', party);
+  const second = await boardParty('osecond', party);
+  expect(first?.report?.sharedRenown).toBe(second?.report?.sharedRenown);
+  expect(first?.report?.sharedRenown).toBe(
+    65 + (first?.events[0]?.result?.renown ?? 0) + (second?.events[0]?.result?.renown ?? 0),
+  );
+  const shared = await db
+    .prepare('SELECT shared_bonus, shared_discovery FROM expedition_parties WHERE id = ?')
+    .bind(party)
+    .first();
+  expect(shared).toEqual({ shared_bonus: 20, shared_discovery: 0 });
+  await db
+    .prepare('UPDATE expedition_parties SET ends_at = ? WHERE id = ?')
+    .bind(finished - 24 * 60 * minute, party)
+    .run();
+  expect((await expeditionAction('othird', party, 'event', choice)).status).toBe(409);
+  expect((await boardParty('othird', party))?.events[0]?.options).toEqual([]);
+});
+
+it('preserves partial standing orders through the expedition and an offline interval', async () => {
+  const { settleStandingOrder } = await import('../../apps/api/src/progression/standing-orders');
+  const db = await expeditionMembers('plead', 'psecond');
+  const apiDb = db as unknown as Parameters<typeof settleStandingOrder>[0];
+  const party = await createExpedition('plead', null);
+  expect((await expeditionAction('psecond', party, 'join', expeditionRole)).status).toBe(200);
+  expect((await expeditionAction('plead', party, 'start')).status).toBe(200);
+  const start = Date.now() - 22 * minute;
+  const departure = start + 2 * minute;
+  const end = departure + 10 * minute;
+  await db
+    .prepare('UPDATE expedition_parties SET started_at = ?, ends_at = ? WHERE id = ?')
+    .bind(departure, end, party)
+    .run();
+  const query = () =>
+    db
+      .prepare("SELECT research_ms FROM standing_orders WHERE character_id = 'character_plead'")
+      .first('research_ms');
+  await settleStandingOrder(apiDb, 'plead', { now: start, skill: 'Research' });
+  await settleStandingOrder(apiDb, 'plead', {
+    now: departure + minute,
+    connectedSince: start,
+    checkpoint: true,
+  });
+  expect(await query()).toBe(2 * minute);
+  await settleStandingOrder(apiDb, 'plead', { now: end + 5 * minute });
+  expect(await query()).toBe(2 * minute);
+  await settleStandingOrder(apiDb, 'plead', {
+    now: end + 8 * minute,
+    connectedSince: end + 5 * minute,
+  });
+  expect(await query()).toBe(0);
+  const ledger = await db
+    .prepare(
+      "SELECT source_type, xp, gold FROM reward_ledger WHERE character_id = 'character_plead' ORDER BY awarded_at",
+    )
+    .all();
+  expect(ledger.results).toEqual([
+    { source_type: 'expedition', xp: 60, gold: 35 },
+    { source_type: 'standing_order', xp: 3, gold: 2 },
+  ]);
+});
+
+it('allows one leadership transfer after absence and audits administrative closure', async () => {
+  const db = await expeditionMembers('tlead', 'tsecond', 'tthird', 'absent_leader');
+  const lead = await connect('tlead');
+  const party = await createExpedition('tlead', null);
+  for (const id of ['tsecond', 'tthird'])
+    expect((await expeditionAction(id, party, 'join', expeditionRole)).status).toBe(200);
+  await db
+    .prepare(
+      'UPDATE expedition_parties SET created_at = created_at - ?, leader_since = leader_since - ? WHERE id = ?',
+    )
+    .bind(6 * minute, 6 * minute, party)
+    .run();
+  expect((await expeditionAction('tsecond', party, 'transfer')).status).toBe(409);
+
+  lead.socket.close(1000);
+  expect((await expeditionAction('tsecond', party, 'transfer')).status).toBe(409);
+  await db.batch([
+    db
+      .prepare(
+        "UPDATE expedition_members SET member_id = 'absent_leader', character_id = 'character_absent_leader' WHERE party_id = ? AND member_id = 'tlead'",
+      )
+      .bind(party),
+    db
+      .prepare("UPDATE expedition_parties SET leader_id = 'absent_leader' WHERE id = ?")
+      .bind(party),
+  ]);
+  const claims = await Promise.all(
+    ['tsecond', 'tthird'].map((id) => expeditionAction(id, party, 'transfer')),
+  );
+  expect(claims.map(({ status }) => status).sort()).toEqual([200, 409]);
+  const winner = claims[0]?.ok ? 'tsecond' : 'tthird';
+  expect((await expeditionAction('absent_leader', party, 'leave')).status).toBe(200);
+  expect((await expeditionAction(winner, party, 'start')).status).toBe(200);
+  expect((await expeditionAction(winner, party, 'fail')).status).toBe(409);
+  expect((await expeditionAction('ada', party, 'fail')).status).toBe(200);
+  expect((await expeditionAction('ada', party, 'fail')).status).toBe(409);
+  expect(await boardParty(winner, party)).toMatchObject({ state: 'failed' });
+  expect(
+    await db
+      .prepare(
+        "SELECT COUNT(*) FROM audit_log WHERE action = 'expedition.failed' AND object_id = ?",
+      )
+      .bind(party)
+      .first('COUNT(*)'),
+  ).toBe(1);
+  expect(
+    await db
+      .prepare(
+        "SELECT COUNT(*) FROM reward_ledger WHERE source_type = 'expedition' AND source_id = ?",
+      )
+      .bind(party)
+      .first('COUNT(*)'),
+  ).toBe(0);
+});
+
+it('lets an Investigator retry a failed deduction once without rerolling its seed', async () => {
+  const { expeditionEvents, missions, roll } =
+    await import('../../apps/api/src/expeditions/content');
+  const db = await expeditionMembers('investigator', 'insecond');
+  await db
+    .prepare(
+      "UPDATE characters SET specialization = 'Investigator' WHERE id = 'character_investigator'",
+    )
+    .run();
+  const party = await createExpedition('investigator', null);
+  expect((await expeditionAction('insecond', party, 'join', expeditionRole)).status).toBe(200);
+  expect((await expeditionAction('investigator', party, 'start')).status).toBe(200);
+  const finish = Date.now() - minute;
+  const mission = missions.get('missing_pages')!;
+  const start = finish - 10 * minute;
+  let seed = 0;
+  while (
+    !expeditionEvents(mission, seed, 'investigator', start, finish)[0]?.deductionClue ||
+    roll(seed, 'investigator:0:check') % 100 < 60 ||
+    roll(seed, 'investigator:0:check') % 100 >= 70
+  )
+    seed++;
+  await db
+    .prepare('UPDATE expedition_parties SET started_at = ?, ends_at = ?, seed = ? WHERE id = ?')
+    .bind(start, finish, seed, party)
+    .run();
+  await runExpeditionCron();
+  const first = { slot: 0, option: 'option_3' };
+  expect((await expeditionAction('investigator', party, 'retry', first)).status).toBe(409);
+  expect((await expeditionAction('investigator', party, 'event', first)).status).toBe(200);
+  expect((await boardParty('investigator', party))?.events[0]).toMatchObject({
+    retry: true,
+    result: { success: false },
+  });
+  expect((await expeditionAction('investigator', party, 'retry', first)).status).toBe(409);
+  const attempts = await Promise.all(
+    [1, 2].map(() =>
+      expeditionAction('investigator', party, 'retry', { slot: 0, option: 'option_1' }),
+    ),
+  );
+  expect(attempts.map(({ status }) => status).sort()).toEqual([200, 409]);
+  expect((await boardParty('investigator', party))?.events[0]).toMatchObject({
+    retry: false,
+    result: { success: true },
+  });
+  expect(
+    await db
+      .prepare(
+        "SELECT COUNT(*) FROM reward_ledger WHERE source_type = 'expedition_event' AND source_id = ?",
+      )
+      .bind(party + ':0')
+      .first('COUNT(*)'),
+  ).toBe(1);
+});

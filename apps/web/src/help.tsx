@@ -29,6 +29,10 @@ export function HelpTip({ topic, children }: { topic: string; children: ReactNod
 
 const questions = [
   [
+    'How do cooperative expeditions work?',
+    'Open the Expedition Board and create or join a party of two to four members. Start as leader or schedule a departure. An underfilled scheduled party has one 15-minute extension. The expedition continues if everyone closes the game. Your standing order pauses during the expedition and resumes when you’re connected again. Optional personal challenges stay open until 24 hours after the expedition ends.',
+  ],
+  [
     'How do I earn while idling?',
     'In your character panel, choose Scribing, Research, or Restoration under Standing order and click Start order. Every five minutes connected to the hall earns character XP, XP for the selected skill, and gold. Leave the game open and your character will keep working while you idle.',
   ],
