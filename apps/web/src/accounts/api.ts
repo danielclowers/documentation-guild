@@ -49,6 +49,10 @@ const messages: Record<string, string> = {
   RATE_LIMITED: 'Too many requests. Wait a minute and try again.',
   UNAUTHORIZED: 'Your session has ended. Sign out and sign in again.',
   NOT_MEMBER: 'This account has no active guild membership. Contact a guild admin.',
+  TRAINING_UNAVAILABLE:
+    'Training requires the listed level, gold, and current rank. Check your updated profile and try again.',
+  SPECIALIZATION_UNAVAILABLE:
+    'Check your level, gold, and when you can switch specializations again.',
   INVALID_STATE: 'This record has already changed. Refresh the list and try again.',
 };
 

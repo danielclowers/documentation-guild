@@ -421,3 +421,26 @@ h1 {
   padding: 0;
   color: #dfcbb1;
 }
+
+.training h3 {
+  margin: 12px 0 6px;
+  font-size: 1rem;
+  color: #e1b776;
+}
+.training ul {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.training li {
+  padding-bottom: 10px;
+  border-bottom: 1px solid #665039;
+}
+.training li p,
+.training > p {
+  font-size: 0.88rem;
+}
+.training button {
+  margin-top: 6px;
+}

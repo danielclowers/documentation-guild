@@ -20,3 +20,7 @@ The roster includes authenticated members who have a current hall connection. Mu
 ## Standing orders
 
 Members start a standing order from the character panel. One complete five-minute cycle pays character XP, XP in the selected skill and gold. Switching settles the old order before changing stations. Each skill retains its unfinished cycle. The server caps disconnected earning time at 24 hours and records each payout in the reward ledger. Apply `0005_standing_orders.sql` before deploying a Worker that uses this feature.
+
+## Training and specialization
+
+Training opens at level 3 and costs 100, 200, and 350 gold per upgrade. The first specialization is free at level 10. Switching costs 200 gold and starts a 24-hour cooldown. Training and skill XP persist through switches. Chronicler applies to Scribing payouts now. Other perks apply when their Guild Business or expedition activity is available. Apply `0006_character_training.sql` before deploying the updated Worker.

@@ -6,6 +6,8 @@ import {
   hallStations,
   passwordSchema,
   skillSchema,
+  specializationKeys,
+  trainingKeys,
   usernameSchema,
 } from '@guild/shared';
 import type { GuildMember, GuildProfile, MemberRole } from '@guild/shared';
@@ -26,6 +28,7 @@ import {
 
 import { guildRoom, notifyHall, settleGuildMember, type HallBindings } from '../realtime/hall-data';
 import { characterProgression } from '../progression/standing-orders';
+import { chooseSpecialization, purchaseTraining } from '../progression/training';
 
 interface Bindings extends ClerkBindings, HallBindings {
   WEB_URL?: string;
@@ -289,6 +292,34 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
     await settleGuildMember(c.env, c.var.member.id, input.skill);
     return c.json(await getProfile(c.env.DB, c.var.member));
   });
+  members.post('/me/training/:key', async (c) => {
+    const key = z.enum(trainingKeys).safeParse(c.req.param('key'));
+    const input = await parseBody(c, z.strictObject({ expectedRank: z.int().min(0).max(2) }));
+    if (!key.success || !input) return c.json({ error: { code: 'INVALID_INPUT' } }, 400);
+    const member = c.var.member;
+    await settleGuildMember(c.env, member.id);
+    if (!(await purchaseTraining(c.env.DB, member.id, key.data, input.expectedRank))) {
+      return c.json({ error: { code: 'TRAINING_UNAVAILABLE' } }, 409);
+    }
+    return c.json(await getProfile(c.env.DB, member));
+  });
+
+  members.post('/me/specialization', async (c) => {
+    const key = z.enum(specializationKeys);
+    const input = await parseBody(
+      c,
+      z.strictObject({ specialization: key, expected: key.nullable() }),
+    );
+    if (!input || input.specialization === input.expected)
+      return c.json({ error: { code: 'INVALID_INPUT' } }, 400);
+    const member = c.var.member;
+    await settleGuildMember(c.env, member.id);
+    if (!(await chooseSpecialization(c.env.DB, member.id, input.specialization, input.expected))) {
+      return c.json({ error: { code: 'SPECIALIZATION_UNAVAILABLE' } }, 409);
+    }
+    return c.json(await getProfile(c.env.DB, member));
+  });
+
   members.patch('/me/character', async (c) => {
     const input = await parseBody(c, characterSchema);
     if (!input) return c.json({ error: { code: 'INVALID_INPUT' } }, 400);

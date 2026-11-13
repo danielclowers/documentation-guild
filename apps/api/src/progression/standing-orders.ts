@@ -1,12 +1,13 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import {
   offlineStandingOrderLimit,
+  specializationCooldown,
   skillLevel,
   skillSchema,
   standingOrderInterval,
   standingOrders,
 } from '@guild/shared';
-import type { CharacterProgression, Skill } from '@guild/shared';
+import type { CharacterProgression, Skill, Specialization, TrainingKey } from '@guild/shared';
 
 const timeColumns = {
   Scribing: 'scribing_ms',
@@ -21,6 +22,7 @@ type OrderState = {
   offline_ms: number;
   suspended_at: number | null;
   version: number;
+  specialization: Specialization | null;
 } & Record<(typeof timeColumns)[Skill], number>;
 
 export function orderAccrual(order: OrderState, now: number, connectedSince?: number) {
@@ -58,7 +60,7 @@ export async function settleStandingOrder(
   for (let attempt = 0; attempt < 8; attempt++) {
     const current = await db
       .prepare(
-        `SELECT so.*, ch.id AS character_id FROM characters ch
+        `SELECT so.*, ch.id AS character_id, ch.specialization FROM characters ch
       JOIN members m ON m.id = ch.member_id LEFT JOIN standing_orders so ON so.character_id = ch.id
       WHERE m.id = ? AND m.status = 'active'`,
       )
@@ -94,6 +96,11 @@ export async function settleStandingOrder(
     const batch = [];
     if (next.units) {
       const rate = standingOrders[current.skill];
+      const gold = next.units * rate.gold;
+      const bonus =
+        current.skill === 'Scribing' && current.specialization === 'Chronicler'
+          ? Math.floor(gold / 10)
+          : 0;
       batch.push(
         db
           .prepare(
@@ -105,7 +112,7 @@ export async function settleStandingOrder(
           .bind(
             next.units * rate.xp,
             next.units * rate.skillXp,
-            next.units * rate.gold,
+            gold + bonus,
             next.end,
             memberId,
             current.version,
@@ -149,13 +156,21 @@ export async function characterProgression(
   db: D1Database,
   characterId: string,
 ): Promise<CharacterProgression> {
-  const [orderResult, skillResult, rewardResult] = await db.batch([
+  const [orderResult, skillResult, rewardResult, trainingResult, specResult] = await db.batch([
     db.prepare('SELECT * FROM standing_orders WHERE character_id = ?').bind(characterId),
     db.prepare('SELECT skill, xp FROM character_skills WHERE character_id = ?').bind(characterId),
     db
       .prepare(
         `SELECT skill, xp, skill_xp AS skillXp, gold, awarded_at AS at FROM reward_ledger
       WHERE character_id = ? AND source_type = 'standing_order' ORDER BY awarded_at DESC LIMIT 1`,
+      )
+      .bind(characterId),
+    db
+      .prepare('SELECT upgrade_key AS key, rank FROM training_purchases WHERE character_id = ?')
+      .bind(characterId),
+    db
+      .prepare(
+        'SELECT specialization, specialization_switched_at AS switchedAt FROM characters WHERE id = ?',
       )
       .bind(characterId),
   ]);
@@ -167,7 +182,13 @@ export async function characterProgression(
       return [skill, { xp, level: skillLevel(xp) }];
     }),
   ) as CharacterProgression['skills'];
+  const training = (trainingResult?.results ?? []) as { key: TrainingKey; rank: number }[];
+  const spec = specResult?.results[0] as
+    { specialization: Specialization | null; switchedAt: number | null } | undefined;
   return {
+    training: Object.fromEntries(training.map(({ key, rank }) => [key, rank])),
+    specialization: spec?.specialization ?? null,
+    canSwitchAt: spec?.switchedAt == null ? null : spec.switchedAt + specializationCooldown,
     order: order
       ? {
           skill: order.skill,

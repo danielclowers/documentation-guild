@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { accountApi, accountError, GuildApiError } from './api';
 import { AdminPanel } from './admin';
+import { Training } from './training';
 import { StandingOrders } from './standing-orders';
 import { PasswordSettings, RecoveryForm } from './password';
 import { LiveHall } from '../hall/live-hall';
@@ -317,6 +318,9 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
         )}
         {character && (
           <StandingOrders character={character} request={request} onChange={updateProgress} />
+        )}
+        {character && (
+          <Training character={character} request={request} onChange={updateProgress} />
         )}
         {profile && <PasswordSettings />}
         {profile?.role === 'admin' && <AdminPanel request={request} />}

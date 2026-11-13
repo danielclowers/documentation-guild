@@ -7,7 +7,11 @@ import type { IdentityProvider, ProvisionedUser } from '../../apps/api/src/accou
 import { hashInvite, type invitationState } from '../../apps/api/src/accounts/invitations';
 import { accountRoutes } from '../../apps/api/src/accounts/routes';
 import { settleStandingOrder } from '../../apps/api/src/progression/standing-orders';
-import { offlineStandingOrderLimit, standingOrderInterval } from '../../packages/shared/src';
+import {
+  characterXpForLevel,
+  offlineStandingOrderLimit,
+  standingOrderInterval,
+} from '../../packages/shared/src';
 
 const origin = 'http://localhost:5173';
 const issuer = 'https://guild.example.test';
@@ -113,6 +117,7 @@ beforeAll(async () => {
     '0003_account_recovery.sql',
     '0004_hall_presence.sql',
     '0005_standing_orders.sql',
+    '0006_character_training.sql',
   ]) {
     const sql = await readFile(
       new URL(`../../apps/api/migrations/${migration}`, import.meta.url),
@@ -143,6 +148,7 @@ beforeEach(async () => {
   });
   await db.batch(
     [
+      'training_purchases',
       'reward_ledger',
       'character_skills',
       'standing_orders',
@@ -414,4 +420,72 @@ it('does not apply the offline cap to continuous hall presence', async () => {
     connectedSince: start,
   });
   expect(await db.prepare('SELECT total_xp FROM characters').first('total_xp')).toBe(1728);
+});
+
+it('charges training ranks once, rejects stale purchases and preserves gold on rejection', async () => {
+  const { auth, read } = await progressionMember();
+  const buy = (expectedRank: number) =>
+    call('/me/training/efficient_scribing', {
+      auth,
+      method: 'POST',
+      body: { expectedRank },
+    });
+  await db.prepare('UPDATE characters SET gold = 650').run();
+  expect((await buy(0)).status).toBe(409);
+  await db.prepare('UPDATE characters SET total_xp = ?').bind(characterXpForLevel(3)).run();
+  expect((await Promise.all([buy(0), buy(0)])).map((response) => response.status).sort()).toEqual([
+    200, 409,
+  ]);
+  expect((await buy(1)).status).toBe(200);
+  expect((await buy(2)).status).toBe(200);
+  expect((await buy(3)).status).toBe(400);
+  expect((await buy(2)).status).toBe(409);
+  expect(await read()).toMatchObject({
+    character: { gold: 0, progression: { training: { efficient_scribing: 3 } } },
+  });
+  const other = await call('/me/training/steady_hands', {
+    auth,
+    method: 'POST',
+    body: { expectedRank: 0 },
+  });
+  expect(other.status).toBe(409);
+});
+
+it('settles before choosing Chronicler and enforces the paid specialization cooldown', async () => {
+  const { auth, read, memberId } = await progressionMember();
+  const choose = (specialization: string, expected: string | null) =>
+    call('/me/specialization', {
+      auth,
+      method: 'POST',
+      body: { specialization, expected },
+    });
+  expect((await choose('Chronicler', null)).status).toBe(409);
+  const start = Date.now() - 8 * standingOrderInterval;
+  await settleStandingOrder(db, memberId, { now: start, skill: 'Scribing' });
+  await db
+    .prepare('UPDATE characters SET total_xp = ?, gold = 500')
+    .bind(characterXpForLevel(10))
+    .run();
+  expect((await choose('Chronicler', null)).status).toBe(200);
+  expect(await db.prepare('SELECT gold FROM characters').first('gold')).toBe(524);
+  const settled = await db
+    .prepare('SELECT accounted_at FROM standing_orders')
+    .first<number>('accounted_at');
+  if (settled === null) throw new Error('Missing order');
+  await settleStandingOrder(db, memberId, {
+    now: settled + 10 * standingOrderInterval,
+    connectedSince: settled,
+  });
+  expect(await db.prepare('SELECT gold FROM characters').first('gold')).toBe(557);
+  expect((await choose('Editor', 'Chronicler')).status).toBe(200);
+  expect((await choose('Warden', 'Editor')).status).toBe(409);
+  expect(await read()).toMatchObject({
+    character: {
+      gold: 357,
+      progression: { specialization: 'Editor', skills: { Scribing: { xp: 90 } } },
+    },
+  });
+  await db.prepare('UPDATE characters SET specialization_switched_at = 0').run();
+  expect((await choose('Warden', 'Editor')).status).toBe(200);
+  expect(await db.prepare('SELECT gold FROM characters').first('gold')).toBe(157);
 });

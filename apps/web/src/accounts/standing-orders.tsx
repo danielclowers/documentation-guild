@@ -75,6 +75,9 @@ export function StandingOrders({
         {order ? 'Change order' : 'Start order'}
       </button>
       {error && <p role="alert">{error}</p>}
+      {selection === 'Scribing' && character.progression.specialization === 'Chronicler' && (
+        <p>Chronicler adds 10% gold, rounded down per payout.</p>
+      )}
       {order?.nextRewardAt != null && (
         <p>
           Next payout around{' '}
