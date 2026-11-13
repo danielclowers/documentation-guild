@@ -1,6 +1,7 @@
 import type { HallMember, HallStation } from '@guild/shared';
 import type Phaser from 'phaser';
 import type { HallVisualState } from './canvas';
+import { hallNameplate } from './nameplate';
 
 type Point = { x: number; y: number };
 const ENTRANCE = { x: 176, y: 211 };
@@ -71,7 +72,7 @@ export function hallSprites(scene: Phaser.Scene) {
     string,
     {
       drawing: Phaser.GameObjects.Graphics;
-      label: Phaser.GameObjects.Text;
+      label: ReturnType<typeof hallNameplate>;
       to: Point;
       from: Point;
       at: number;
@@ -91,17 +92,9 @@ export function hallSprites(scene: Phaser.Scene) {
       let sprite = sprites.get(member.id);
       if (!sprite) {
         const drawing = scene.add.graphics();
-        const label = scene.add
-          .text(0, 0, '', {
-            fontSize: '7px',
-            fontFamily: 'monospace',
-            color: '#fff0d5',
-            backgroundColor: '#30222a',
-          })
-          .setOrigin(0.5, 1);
         sprite = {
           drawing,
-          label,
+          label: hallNameplate(scene),
           to,
           from: ENTRANCE,
           at: Math.max(member.arrivalAt, member.stationAt),
@@ -145,11 +138,12 @@ export function hallSprites(scene: Phaser.Scene) {
       if (!walking && member.station !== 'Lounge')
         drawing.fillStyle(0xf0d19e).fillRect(x + 4, y - 7 + phase, 4, 2);
       const waving = wave?.memberId === member.id && now - wave.at < 2400;
-      label
-        .setText(waving ? `${member.displayName} waves` : member.displayName)
-        .setPosition(x, y - 23 - (member.slot % 2) * 8)
-        .setDepth(500);
-      label.setX(Math.max(label.width / 2 + 3, Math.min(x, 349 - label.width / 2)));
+      label.place(
+        waving ? `${member.displayName} waves` : member.displayName,
+        x,
+        y - 23 - (member.slot % 2) * 12,
+        scene.scale.width,
+      );
     }
   };
 }
