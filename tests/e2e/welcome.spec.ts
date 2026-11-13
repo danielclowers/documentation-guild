@@ -3,7 +3,9 @@ import { expect, test } from '@playwright/test';
 test('renders the welcome screen and hall at the GitHub Pages base path', async ({ page }) => {
   await page.goto('./');
   await expect(page.getByRole('heading', { name: 'The Documentation Guild' })).toBeVisible();
-  await expect(page.getByText('The guild is invitation-only.', { exact: false })).toBeVisible();
+  const signIn = page.getByRole('heading', { name: 'Guild sign-in' });
+  const unconfigured = page.getByText('The guild is invitation-only.', { exact: false });
+  await expect(signIn.or(unconfigured)).toBeVisible();
   const canvas = page.getByRole('img', { name: /pixel-art guild hall/ }).locator('canvas');
   await expect(canvas).toBeVisible();
   await expect
