@@ -2,23 +2,30 @@ import type { D1Database } from '@cloudflare/workers-types';
 import { expeditionRewards } from '@guild/shared';
 import type { ExpeditionBoard, ExpeditionParty } from '@guild/shared';
 import {
-  chapters,
   type ExpeditionSnapshot,
   discoveries,
   expeditionEvents,
   missions,
+  modifiers,
+  modifierView,
   optionalDiscovery,
   roll,
 } from './content';
 import { eventEffects } from './events';
-import { chapterOneComplete, type PartyRow } from './parties';
+import type { PartyRow } from './parties';
+import {
+  chapterProgressSql,
+  chronicle,
+  storyCluesSql,
+  type ChapterProgress,
+  type StoryClue,
+} from '../story/chronicle';
 
 export async function expeditionBoard(
   db: D1Database,
   member: string,
   now: number,
 ): Promise<ExpeditionBoard> {
-  const unlocked = await chapterOneComplete(db);
   const visible = `SELECT p.id FROM expedition_parties p WHERE p.state IN ('recruiting','grace','running')
     OR (p.state IN ('completed','failed','cancelled','expired') AND EXISTS (SELECT 1 FROM expedition_members e
       WHERE e.party_id = p.id AND e.member_id = ? AND (e.snapshot IS NOT NULL OR e.released_at >= p.closed_at)))
@@ -61,10 +68,8 @@ export async function expeditionBoard(
         `WITH visible AS (${visible}) SELECT i.party_id FROM expedition_invites i JOIN visible v ON v.id = i.party_id WHERE i.member_id = ?`,
       )
       .bind(member, member),
-    db.prepare(`SELECT p.chapter, COUNT(*) AS count, SUM(p.baseline_renown + p.shared_bonus +
-      (SELECT COALESCE(SUM(e.renown),0) FROM expedition_events e WHERE e.party_id = p.id)) AS renown
-      FROM expedition_parties p WHERE state = 'completed' GROUP BY p.chapter`),
-    db.prepare('SELECT chapter, clue FROM expedition_chronicle ORDER BY rowid'),
+    db.prepare(chapterProgressSql),
+    db.prepare(storyCluesSql),
   ]);
   type Roster = ExpeditionParty['roster'][number] & {
     party_id: string;
@@ -85,8 +90,7 @@ export async function expeditionBoard(
     discovery_key: string | null;
   };
   const inviteRows = invitations!.results as { party_id: string }[];
-  const progressRows = progress!.results as { chapter: string; count: number; renown: number }[];
-  const clueRows = clues!.results as { chapter: string; clue: string }[];
+  const story = chronicle(progress!.results as ChapterProgress[], clues!.results as StoryClue[]);
   const members = roster!.results as Roster[];
   const events = outcomes!.results as Outcome[];
   return {
@@ -97,12 +101,14 @@ export async function expeditionBoard(
       minutes: m.duration_minutes,
       tier: m.tier,
       recommendedLevel: m.recommended_level,
-      unlocked: m.chapter === 'chapter1' || unlocked,
+      unlocked: story.some(({ key }) => key === m.chapter),
       approaches: m.approaches.map(({ key, label, description }) => ({ key, label, description })),
     })),
+    modifiers: [...modifiers.values()].map(modifierView),
     invitees: invitees!.results as ExpeditionBoard['invitees'],
     parties: (parties!.results as (PartyRow & { event_renown: number })[]).map((p) => {
       const mission = missions.get(p.mission)!;
+      const modifier = p.modifier ? modifiers.get(p.modifier) : undefined;
       const rows = members.filter((item) => item.party_id === p.id);
       const me = rows.find((item) => item.id === member);
       const personal =
@@ -110,61 +116,64 @@ export async function expeditionBoard(
         p.started_at !== null &&
         p.ends_at !== null &&
         ['running', 'completed'].includes(p.state)
-          ? expeditionEvents(mission, p.seed, member, p.started_at, p.ends_at).map((event) => {
-              const outcome = events.find(
-                (item) => item.party_id === p.id && item.slot === event.slot,
-              );
-              const retry =
-                outcome?.success === 0 &&
-                Boolean(event.deductionClue) &&
-                (JSON.parse(me.snapshot!) as ExpeditionSnapshot).specialization ===
-                  'Investigator' &&
-                !events.some((item) => item.party_id === p.id && item.retried);
-              return {
-                slot: event.slot,
-                title: event.title,
-                context: event.deductionClue
-                  ? event.context + ' ' + event.deductionClue
-                  : event.context,
-                retry,
-                skill: event.skill,
-                availableAt: event.availableAt,
-                expiresAt: event.expiresAt,
-                options:
-                  now >= event.availableAt && now < event.expiresAt && (!outcome || retry)
-                    ? event.options
-                        .filter(({ id }) => id !== outcome?.option_id)
-                        .map(({ id, label, effect }) => ({
-                          id,
-                          label,
-                          effect:
-                            effect === 'guild_renown' && me.role === 'Scribing'
-                              ? '+6 renown on success with your Scribing role'
-                              : eventEffects[effect],
-                        }))
-                    : [],
-                result: outcome
-                  ? {
-                      success: Boolean(outcome.success),
-                      xp: outcome.xp,
-                      gold: outcome.gold,
-                      renown: outcome.renown,
-                      discovery: outcome.discovery_key
-                        ? discoveries.get(outcome.discovery_key)?.title
-                        : undefined,
-                      text: outcome.success
-                        ? (event.options.find(({ id }) => id === outcome.option_id)?.consequence ??
-                          'You helped the party.')
-                        : 'The attempt fell short. The expedition’s baseline rewards are safe.',
-                    }
-                  : undefined,
-              };
-            })
+          ? expeditionEvents(mission, p.seed, member, p.started_at, p.ends_at, p.modifier).map(
+              (event) => {
+                const outcome = events.find(
+                  (item) => item.party_id === p.id && item.slot === event.slot,
+                );
+                const retry =
+                  outcome?.success === 0 &&
+                  Boolean(event.deductionClue) &&
+                  (JSON.parse(me.snapshot!) as ExpeditionSnapshot).specialization ===
+                    'Investigator' &&
+                  !events.some((item) => item.party_id === p.id && item.retried);
+                return {
+                  slot: event.slot,
+                  title: event.title,
+                  context: event.deductionClue
+                    ? event.context + ' ' + event.deductionClue
+                    : event.context,
+                  retry,
+                  skill: event.skill,
+                  availableAt: event.availableAt,
+                  expiresAt: event.expiresAt,
+                  options:
+                    now >= event.availableAt && now < event.expiresAt && (!outcome || retry)
+                      ? event.options
+                          .filter(({ id }) => id !== outcome?.option_id)
+                          .map(({ id, label, effect }) => ({
+                            id,
+                            label,
+                            effect:
+                              effect === 'guild_renown' && me.role === 'Scribing'
+                                ? '+6 renown on success with your Scribing role'
+                                : eventEffects[effect],
+                          }))
+                      : [],
+                  result: outcome
+                    ? {
+                        success: Boolean(outcome.success),
+                        xp: outcome.xp,
+                        gold: outcome.gold,
+                        renown: outcome.renown,
+                        discovery: outcome.discovery_key
+                          ? discoveries.get(outcome.discovery_key)?.title
+                          : undefined,
+                        text: outcome.success
+                          ? (event.options.find(({ id }) => id === outcome.option_id)
+                              ?.consequence ?? 'You helped the party.')
+                          : 'The attempt fell short. The expedition’s baseline rewards are safe.',
+                      }
+                    : undefined,
+                };
+              },
+            )
           : [];
       return {
         id: p.id,
         mission: p.mission,
         leaderId: p.leader_id,
+        modifier: modifier && modifierView(modifier),
         state: p.state,
         scheduledAt: p.scheduled_at,
         graceUntil: p.grace_until,
@@ -204,33 +213,6 @@ export async function expeditionBoard(
               : undefined,
       };
     }),
-    chronicle: chapters
-      .filter((chapter) => chapter.key === 'chapter1' || unlocked)
-      .map((chapter) => {
-        const row = progressRows.find((item) => item.chapter === chapter.key);
-        const chapterClues = clueRows
-          .filter((item) => item.chapter === chapter.key)
-          .map((item) => discoveries.get(String(item.clue))!.title);
-        const [targetExpeditions, targetRenown, targetClues] = chapter.objectives.map(
-          (item) => item.target,
-        );
-        const count = Number(row?.count ?? 0);
-        const renown = Number(row?.renown ?? 0);
-        return {
-          title: chapter.title,
-          expeditions: count,
-          renown,
-          clues: chapterClues,
-          targetExpeditions: targetExpeditions!,
-          targetRenown: targetRenown!,
-          targetClues: targetClues!,
-          recap:
-            count >= targetExpeditions! &&
-            renown >= targetRenown! &&
-            chapterClues.length >= targetClues!
-              ? chapter.recap
-              : undefined,
-        };
-      }),
+    chronicle: story,
   };
 }

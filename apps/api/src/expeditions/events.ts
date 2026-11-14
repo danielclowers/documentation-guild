@@ -1,7 +1,14 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import type { ExpeditionSnapshot } from './content';
 import type { Skill } from '@guild/shared';
-import { challengeChance, expeditionEvents, missions, optionalDiscovery, roll } from './content';
+import {
+  challengeChance,
+  expeditionEvents,
+  missions,
+  modifiers,
+  optionalDiscovery,
+  roll,
+} from './content';
 import { findParty } from './parties';
 
 export const eventEffects = {
@@ -37,32 +44,50 @@ export async function resolveEvent(
     .bind(partyId, memberId)
     .first<{ character_id: string; role: Skill; approach: string; snapshot: string }>();
   if (!mission || !member) return false;
-  const event = expeditionEvents(mission, party.seed, memberId, party.started_at, party.ends_at)[
-    slot
-  ];
+  const event = expeditionEvents(
+    mission,
+    party.seed,
+    memberId,
+    party.started_at,
+    party.ends_at,
+    party.modifier,
+  )[slot];
   const option = event?.options.find((item) => item.id === optionId);
   if (!event || !option || now < event.availableAt || now >= event.expiresAt) return false;
 
   const snapshot = JSON.parse(member.snapshot) as ExpeditionSnapshot;
   if (retry && (!event.deductionClue || snapshot.specialization !== 'Investigator')) return false;
   const key = memberId + ':' + slot;
+  const modifier = party.modifier ? modifiers.get(party.modifier) : undefined;
   const chance = challengeChance(
     event.skill,
     mission.recommended_level,
     snapshot,
     member.role,
     (mission.approaches.find(({ key }) => key === member.approach)?.strategy_bonus ?? 0) +
-      (option.effect === 'reliable_bonus' ? 10 : 0),
+      (option.effect === 'reliable_bonus' ? 10 : 0) +
+      (party.modifier === 'ancient_wards' &&
+      member.approach === 'careful' &&
+      event.skill === 'Restoration'
+        ? 3
+        : 0),
+    modifier,
   );
   const success = roll(party.seed, key + ':check') % 100 < chance;
   const renown =
     success && option.effect === 'guild_renown' ? 5 + Number(member.role === 'Scribing') : 0;
-  const xp = success
-    ? Math.floor(
-        ((10 + (roll(party.seed, key + ':xp') % 11)) * (100 + snapshot.readiness * 2)) / 100,
-      )
-    : 0;
-  const gold = success ? 5 + (roll(party.seed, key + ':gold') % 11) : 0;
+  const xpRoll = roll(party.seed, key + ':xp') % 11;
+  const goldRoll = roll(party.seed, key + ':gold') % 11;
+  const bonusXpRoll =
+    party.modifier === 'unstable_enchantments' && event.skill === 'Restoration'
+      ? Math.max(xpRoll, roll(party.seed, key + ':modifier-xp') % 11)
+      : xpRoll;
+  const bonusGoldRoll =
+    party.modifier === 'royal_inspection' && event.skill === 'Scribing'
+      ? Math.max(goldRoll, roll(party.seed, key + ':modifier-gold') % 11)
+      : goldRoll;
+  const xp = success ? Math.floor(((10 + bonusXpRoll) * (100 + snapshot.readiness * 2)) / 100) : 0;
+  const gold = success ? 5 + bonusGoldRoll : 0;
   const resolution = crypto.randomUUID();
   const discovery = optionalDiscovery(roll(party.seed, key + ':item'));
   const discoveryChance = Math.min(
@@ -70,6 +95,7 @@ export async function resolveEvent(
     12 +
       (member.role === 'Research' ? 5 : 0) +
       (member.approach === 'curious' ? 5 : 0) +
+      (party.modifier === 'missing_references' && event.skill === 'Research' ? 5 : 0) +
       (event.skill === 'Research' && snapshot.specialization === 'Archivist' ? 8 : 0),
   );
   const sharedDiscovery = optionalDiscovery(roll(party.seed, 'shared-item'));
@@ -161,12 +187,13 @@ export async function resolveEvent(
       .bind(partyId, resolution),
     db
       .prepare(
-        `UPDATE expedition_parties SET shared_discovery = ?, resolved_by = ? WHERE id = ? AND shared_discovery = 0
+        `UPDATE expedition_parties SET shared_discovery = ?, shared_discovered_at = ?, resolved_by = ? WHERE id = ? AND shared_discovery = 0
       AND EXISTS (SELECT 1 FROM expedition_events WHERE resolution_id = ?)
       AND (SELECT COUNT(DISTINCT member_id) FROM expedition_events WHERE party_id = ?) >= 3`,
       )
       .bind(
         roll(party.seed, 'shared-discover') % 100 < 15 ? 1 : -1,
+        now,
         resolution + ':discovery',
         partyId,
         resolution,

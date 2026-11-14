@@ -616,3 +616,28 @@ h1 {
 .expedition-event small {
   display: block;
 }
+
+.story-list {
+  padding-inline-start: 22px;
+}
+
+.story-list li {
+  margin-block: 8px;
+}
+
+.story-list p {
+  margin: 4px 0;
+}
+
+.story-entry {
+  padding-block: 9px;
+  border-top: 1px solid #665039;
+}
+
+.story-entry h4 {
+  margin: 4px 0;
+}
+
+.story-panel button {
+  margin: 4px 8px 0 0;
+}

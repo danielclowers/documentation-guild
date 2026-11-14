@@ -39,6 +39,8 @@ test('opens the FAQ and returns to the guild', async ({ page }) => {
   await expect(
     page.getByText('The expedition continues if everyone closes the game.', { exact: false }),
   ).toBeVisible();
+  await page.getByText('Where do discoveries and expedition reports go?', { exact: true }).click();
+  await expect(page.getByText('Open Journal & Chronicle', { exact: false })).toBeVisible();
   await page.getByRole('link', { name: 'Back to the guild' }).click();
   await expect(page.getByRole('heading', { name: 'The Documentation Guild' })).toBeVisible();
 });

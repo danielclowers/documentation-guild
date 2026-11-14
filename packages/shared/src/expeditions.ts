@@ -1,4 +1,5 @@
 import type { Skill } from './index';
+import type { ChronicleChapter } from './story';
 
 export const expeditionMinute = 60_000;
 export const expeditionGrace = 15 * expeditionMinute;
@@ -13,6 +14,12 @@ export type ExpeditionReward = { xp: number; skillXp: number; gold: number; reno
 
 export type ExpeditionState =
   'recruiting' | 'grace' | 'running' | 'completed' | 'cancelled' | 'expired' | 'failed';
+export interface ExpeditionModifier {
+  key: string;
+  title: string;
+  description: string;
+}
+
 export interface ExpeditionMission {
   key: string;
   title: string;
@@ -45,6 +52,7 @@ export interface ExpeditionParty {
   id: string;
   mission: string;
   leaderId: string;
+  modifier?: ExpeditionModifier;
   state: ExpeditionState;
   scheduledAt: number | null;
   graceUntil: number | null;
@@ -62,16 +70,8 @@ export interface ExpeditionParty {
 }
 export interface ExpeditionBoard {
   missions: ExpeditionMission[];
+  modifiers: ExpeditionModifier[];
   parties: ExpeditionParty[];
   invitees: { id: string; name: string }[];
-  chronicle: {
-    title: string;
-    expeditions: number;
-    renown: number;
-    targetExpeditions: number;
-    targetRenown: number;
-    targetClues: number;
-    clues: string[];
-    recap?: string;
-  }[];
+  chronicle: ChronicleChapter[];
 }

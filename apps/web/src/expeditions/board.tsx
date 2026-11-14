@@ -114,6 +114,11 @@ function PartyCard({
   return (
     <article className="expedition-card">
       <h4>{mission.title}</h4>
+      {party.modifier && (
+        <p>
+          <strong>{party.modifier.title}</strong> · {party.modifier.description}
+        </p>
+      )}
       <p>
         {stateLabels[party.state]} · {party.roster.length}/4 members
         {party.invited && recruiting && ' · You’re invited'}
@@ -316,6 +321,7 @@ export function Expeditions({
   const [open, setOpen] = useState(false);
   const [board, setBoard] = useState<Board>();
   const [key, setKey] = useState('');
+  const [modifier, setModifier] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const load = useCallback(async () => setBoard(await request<Board>('/expeditions')), [request]);
@@ -335,6 +341,7 @@ export function Expeditions({
       if (path === '/expeditions') {
         await request(path, options);
         setKey('');
+        setModifier('');
         await load();
       } else {
         setBoard(await request<Board>(path, options));
@@ -357,6 +364,7 @@ export function Expeditions({
   return (
     <details
       className="guild-admin expeditions"
+      id="expedition-board"
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary>Expedition Board</summary>
@@ -375,7 +383,13 @@ export function Expeditions({
           {!committed && (
             <label>
               Plan an expedition
-              <select value={key} onChange={(event) => setKey(event.currentTarget.value)}>
+              <select
+                value={key}
+                onChange={(event) => {
+                  setKey(event.currentTarget.value);
+                  setModifier('');
+                }}
+              >
                 <option value="">Select an expedition</option>
                 {board.missions.map((mission) => (
                   <option key={mission.key} value={mission.key} disabled={!mission.unlocked}>
@@ -404,13 +418,40 @@ export function Expeditions({
                 Baseline per member · {expeditionRewards[selected.tier].xp} XP ·{' '}
                 {expeditionRewards[selected.tier].gold} gold
               </p>
+              {selected.tier !== 'tutorial' && board.modifiers?.length > 0 && (
+                <>
+                  <label>
+                    Optional modifier
+                    <select
+                      value={modifier}
+                      onChange={(event) => setModifier(event.currentTarget.value)}
+                    >
+                      <option value="">Standard conditions</option>
+                      {board.modifiers.map((item) => (
+                        <option key={item.key} value={item.key}>
+                          {item.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {modifier && (
+                    <p>{board.modifiers.find((item) => item.key === modifier)?.description}</p>
+                  )}
+                </>
+              )}
               <PartyChoices
                 key={selected.key}
                 mission={selected}
                 busy={busy}
                 label="Create party"
                 onSubmit={(role, approach, delay) =>
-                  void action('/expeditions', { mission: selected.key, role, approach, delay })
+                  void action('/expeditions', {
+                    mission: selected.key,
+                    role,
+                    approach,
+                    delay,
+                    modifier: modifier || undefined,
+                  })
                 }
               />
             </div>

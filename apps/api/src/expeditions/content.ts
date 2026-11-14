@@ -2,6 +2,26 @@ import { catalog } from '@guild/content';
 import { expeditionDay, skillLevel } from '@guild/shared';
 import type { Skill, Specialization } from '@guild/shared';
 
+export const modifiers = new Map(catalog.modifiers.map((modifier) => [modifier.key, modifier]));
+export type Modifier = (typeof catalog.modifiers)[number];
+
+const modifierEffects: Record<string, string> = {
+  unstable_enchantments:
+    'Restoration checks are 5 percentage points harder. Successful Restoration challenges roll twice for optional XP and keep the higher roll.',
+  missing_references:
+    'Research checks gain 5 percentage points. Research discovery choices gain 5 percentage points to find an item.',
+  royal_inspection:
+    'Scribing checks gain 5 percentage points. Successful Scribing challenges roll twice for optional gold and keep the higher roll.',
+  ancient_wards:
+    'Restoration checks lose 3 percentage points. A careful approach offsets that penalty.',
+  corrupted_chronicle:
+    'Every member receives a second optional Research challenge, up to the usual two-challenge limit.',
+};
+
+export function modifierView(modifier: Modifier) {
+  return { key: modifier.key, title: modifier.title, description: modifierEffects[modifier.key]! };
+}
+
 export const missions = new Map(catalog.expeditions.map((mission) => [mission.key, mission]));
 export const chapters = catalog.chapters.filter((chapter) => chapter.status === 'launch');
 export const discoveries = new Map(catalog.discoveries.map((item) => [item.key, item]));
@@ -39,19 +59,28 @@ const deductionClues: Record<string, string> = {
     'Only the original mirror shows the letters in reverse. Which approach lets you read them?',
 };
 
+const cipher = catalog.events.findIndex(({ key }) => key === 'mirror_archive');
+const alternateCipher = catalog.events.findIndex(({ key }) => key === 'wrong_way_map');
+
 export function expeditionEvents(
   mission: Mission,
   seed: number,
   member: string,
   start: number,
   end: number,
+  modifierKey?: string | null,
 ) {
   const first = roll(seed, member + ':first') % catalog.events.length;
   const second =
-    (first + 1 + (roll(seed, member + ':next') % (catalog.events.length - 1))) %
-    catalog.events.length;
+    modifierKey === 'corrupted_chronicle'
+      ? first === cipher
+        ? alternateCipher
+        : cipher
+      : (first + 1 + (roll(seed, member + ':next') % (catalog.events.length - 1))) %
+        catalog.events.length;
   const indexes =
-    mission.tier !== 'tutorial' && roll(seed, member + ':extra') % 2 === 0
+    mission.tier !== 'tutorial' &&
+    (modifierKey === 'corrupted_chronicle' || roll(seed, member + ':extra') % 2 === 0)
       ? [first, second]
       : [first];
   return indexes.map((index, slot) => ({
@@ -69,6 +98,7 @@ export function challengeChance(
   snapshot: ExpeditionSnapshot,
   role: Skill,
   approach: number,
+  modifier?: Modifier,
 ) {
   const xp = {
     Scribing: snapshot.scribing,
@@ -82,8 +112,12 @@ export function challengeChance(
         (snapshot.specialization === 'Warden' ? 10 : 0)
       : 0;
   const research = skill === 'Research' ? snapshot.researchTraining * 2 : 0;
+  const adjustment = modifier?.affected_skill === skill ? modifier.skill_check_adjustment : 0;
   return Math.max(
     30,
-    Math.min(95, 55 + 3 * (skillLevel(xp) - recommended) + restoration + research + approach),
+    Math.min(
+      95,
+      55 + 3 * (skillLevel(xp) - recommended) + restoration + research + approach + adjustment,
+    ),
   );
 }

@@ -37,3 +37,5 @@ export * from './progression';
 export * from './business';
 
 export * from './expeditions';
+
+export * from './story';

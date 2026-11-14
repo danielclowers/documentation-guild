@@ -7,12 +7,14 @@ import {
   expeditionRewards,
 } from '@guild/shared';
 import type { ExpeditionState, Skill } from '@guild/shared';
-import { missions } from './content';
+import { missions, modifiers } from './content';
+import { chapterOneComplete } from '../story/chronicle';
 
 export interface PartyRow {
   id: string;
   mission: string;
   chapter: string;
+  modifier: string | null;
   leader_id: string;
   state: ExpeditionState;
   seed: number;
@@ -34,19 +36,6 @@ export async function findParty(db: D1Database, id: string) {
   return db.prepare('SELECT * FROM expedition_parties WHERE id = ?').bind(id).first<PartyRow>();
 }
 
-export async function chapterOneComplete(db: D1Database) {
-  return Boolean(
-    await db
-      .prepare(
-        `SELECT COUNT(*) AS count FROM expedition_parties WHERE chapter = 'chapter1' AND state = 'completed'
-    HAVING COUNT(*) >= 3 AND (SELECT COUNT(*) FROM expedition_chronicle WHERE chapter = 'chapter1') >= 2
-    AND SUM(baseline_renown + shared_bonus) + (SELECT COALESCE(SUM(e.renown),0)
-      FROM expedition_events e JOIN expedition_parties p ON p.id = e.party_id WHERE p.chapter = 'chapter1' AND p.state = 'completed') >= 300`,
-      )
-      .first(),
-  );
-}
-
 export async function createParty(
   db: D1Database,
   member: string,
@@ -55,16 +44,18 @@ export async function createParty(
   approach: string,
   delay: number | null,
   now: number,
+  modifier?: string,
 ) {
   const mission = missions.get(key);
   if (!mission?.approaches.some((item) => item.key === approach)) return false;
+  if (modifier && (mission.tier === 'tutorial' || !modifiers.has(modifier))) return false;
   if (mission.chapter === 'chapter2' && !(await chapterOneComplete(db))) return false;
   const id = crypto.randomUUID();
   const [created] = await db.batch([
     db
       .prepare(
-        `INSERT INTO expedition_parties (id, mission, chapter, leader_id, state, seed, created_at, leader_since, scheduled_at)
-      SELECT ?, ?, ?, m.id, 'recruiting', ?, ?, ?, ? FROM members m JOIN characters c ON c.member_id = m.id
+        `INSERT INTO expedition_parties (id, mission, chapter, leader_id, state, seed, created_at, leader_since, scheduled_at, modifier)
+      SELECT ?, ?, ?, m.id, 'recruiting', ?, ?, ?, ?, ? FROM members m JOIN characters c ON c.member_id = m.id
       WHERE m.id = ? AND m.status = 'active'
       AND NOT EXISTS (SELECT 1 FROM expedition_members WHERE member_id = m.id AND released_at IS NULL)`,
       )
@@ -76,6 +67,7 @@ export async function createParty(
         now,
         now,
         delay === null ? null : now + delay * expeditionMinute,
+        modifier ?? null,
         member,
       ),
     db

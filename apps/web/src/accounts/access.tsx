@@ -10,6 +10,7 @@ import { Training } from './training';
 import { StandingOrders } from './standing-orders';
 import { PasswordSettings, RecoveryForm } from './password';
 import { Expeditions } from '../expeditions/board';
+import { GuildNoticeboard, Journal, WhileYouWereAway } from '../story/panels';
 import { LiveHall } from '../hall/live-hall';
 import { AvatarPreview, CharacterFields, startingAppearance } from './character';
 
@@ -323,6 +324,9 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
           </div>
         )}
         {character && (
+          <WhileYouWereAway key={character.id} characterId={character.id} request={request} />
+        )}
+        {character && (
           <StandingOrders
             character={character}
             request={request}
@@ -337,6 +341,8 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
           <Expeditions request={request} profile={profile} onChange={updateProgress} />
         )}
         {character && <GuildBusiness request={request} onChange={updateProgress} />}
+        {character && <Journal request={request} />}
+        {character && <GuildNoticeboard request={request} />}
         {profile && <PasswordSettings />}
         {profile?.role === 'admin' && <AdminPanel request={request} />}
         <button

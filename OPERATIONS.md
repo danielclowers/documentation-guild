@@ -36,3 +36,11 @@ An active guild member can create a party at the Expedition Board and invite oth
 The Worker records departure and return times. Disconnects preserve the roster, and the scheduled Worker credits eligible party members on return even when the hall is empty. Connected standing orders pause during the expedition and keep their partial cycles. Guild Business remains available. Individual bonus challenges open during the run and stay available for 24 hours after return. Optional results and shared rewards appear in each member's report.
 
 If an expedition is unrecoverable, a guild admin can end it from the board. The Worker releases the roster, ends the standing-order pause, and records `expedition.failed` in the audit log. Completed optional rewards remain credited. Expeditions have no entry fee. Check Worker Cron Trigger logs and `/health` if scheduled parties appear stuck.
+
+## Journal, activity and return summary
+
+Journal & Chronicle shows previously collected personal discoveries, two connected mysteries, and unlocked guild story scenes. Required clues come from expedition milestones, and all members can read them. Guild activity shows expedition returns, shared discoveries, story clues, and renown milestones from the last 30 days. The feed does not include personal discoveries or balances.
+
+While you were away uses the last check-in recorded for this character in the current browser. It shows completed expeditions, open challenges and invitations, discoveries, guild milestones, and standing-order rewards already earned during connected play. A new browser uses a seven-day recap.
+
+From the Expedition Board, a leader can choose one optional modifier for a standard or advanced mission. The board previews its effect before creation. The choice applies to optional challenges and remains fixed for the party. Advanced and tutorial baseline rewards remain the same.

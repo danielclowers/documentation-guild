@@ -116,6 +116,7 @@ beforeAll(async () => {
     '0006_character_training.sql',
     '0007_guild_business.sql',
     '0008_expeditions.sql',
+    '0009_guild_activity.sql',
   ]) {
     const sql = await readFile(
       new URL(`../../apps/api/migrations/${migration}`, import.meta.url),
@@ -146,6 +147,7 @@ beforeEach(async () => {
   });
   await db.batch(
     [
+      'guild_renown_milestones',
       'expedition_invites',
       'expedition_chronicle',
       'expedition_events',
@@ -612,4 +614,98 @@ it('serves all twelve case templates, records retries and awards a rolling eight
     ).json(),
   ).toMatchObject({ reward: { xp: 20, skillXp: 10 } });
   await db.prepare('UPDATE guilds SET renown = 0').run();
+});
+
+it('keeps the journal and recap private and pages through guild-safe activity', async () => {
+  const admin = tokenFor('user_admin');
+  const invite = await createInvitation();
+  expect((await redeem(invite.token)).status).toBe(201);
+  const player = tokenFor('user_redeemed');
+  const profile = (await (
+    await call('/me', { auth: player })
+  ).json()) as import('../../packages/shared/src').GuildProfile;
+  const character = profile.character!.id;
+  const at = Date.now() - 1000;
+  await db.batch([
+    db
+      .prepare(
+        "INSERT INTO personal_discoveries VALUES (?, 'echoing_index', 'business', 'case-1', ?)",
+      )
+      .bind(character, at),
+    db
+      .prepare(
+        "INSERT INTO personal_discoveries VALUES (?, 'library_within', 'expedition_event', 'party-1:0', ?)",
+      )
+      .bind(character, at),
+    db
+      .prepare(
+        "INSERT INTO reward_ledger VALUES (?, 'standing_order', '1', 'Scribing', 3, 5, 3, ?)",
+      )
+      .bind(character, at),
+    db.prepare('UPDATE guilds SET renown = 0'),
+    db.prepare('UPDATE guilds SET renown = 350'),
+    ...Array.from({ length: 23 }, (_, index) =>
+      db
+        .prepare(
+          `INSERT INTO expedition_parties (id, mission, chapter, leader_id, leader_since, state, seed, created_at, ends_at, baseline_renown)
+       VALUES (?, 'missing_pages', 'chapter1', 'guild-admin', 0, 'completed', 1, 0, ?, 20)`,
+        )
+        .bind('public-party-' + index, at),
+    ),
+    db
+      .prepare(
+        "INSERT INTO expedition_parties (id, mission, chapter, leader_id, leader_since, state, seed, created_at, ends_at) VALUES ('stale-party', 'missing_pages', 'chapter1', 'guild-admin', 0, 'completed', 1, 0, ?)",
+      )
+      .bind(at - 31 * 86_400_000),
+    db.prepare(
+      "INSERT INTO expedition_chronicle VALUES ('missing_chapter', 'chapter1', 'public-party-0')",
+    ),
+  ]);
+  for (const path of ['/me/journal', '/me/recap', '/guild/feed']) {
+    expect((await call(path)).status).toBe(401);
+    expect((await call(path, { auth: tokenFor('user_outside') })).status).toBe(403);
+  }
+  const journalResponse = await call('/me/journal', { auth: player });
+  expect(journalResponse.status).toBe(200);
+  const journal =
+    (await journalResponse.json()) as import('../../packages/shared/src').GuildJournal;
+  expect(journal.discoveries.map(({ key }) => key).sort()).toEqual([
+    'echoing_index',
+    'library_within',
+    'missing_chapter',
+  ]);
+  expect(
+    journal.chains
+      .find(({ key }) => key === 'catalog_mystery')
+      ?.discoveries.map(({ step }) => step),
+  ).toEqual([1, 3]);
+  expect(journal.chronicle).toHaveLength(1);
+  expect(journal.chronicle[0]?.scenes).toHaveLength(2);
+  expect(await (await call('/me/journal', { auth: admin })).json()).toMatchObject({
+    discoveries: [{ key: 'missing_chapter', source: 'chronicle' }],
+  });
+  const recap = await (await call(`/me/recap?since=${at}`, { auth: player })).json();
+  expect(recap).toMatchObject({ standing: { xp: 3, skillXp: 5, gold: 3 }, discoveries: 2 });
+  expect(await (await call(`/me/recap?since=${at}`, { auth: admin })).json()).toMatchObject({
+    standing: { xp: 0, skillXp: 0, gold: 0 },
+    discoveries: 0,
+    milestones: 3,
+  });
+  expect((await call('/me/recap?since=bad', { auth: admin })).status).toBe(400);
+  const feedResponse = await call('/guild/feed', { auth: admin });
+  expect(feedResponse.status).toBe(200);
+  const feed = (await feedResponse.json()) as import('../../packages/shared/src').GuildFeed;
+  expect(feed.entries).toHaveLength(20);
+  expect(feed.renown).toBe(350);
+  expect(feed.next).toBeTypeOf('string');
+  const next = (await (
+    await call('/guild/feed?before=' + encodeURIComponent(feed.next!), { auth: player })
+  ).json()) as typeof feed;
+  expect(next.next).toBeNull();
+  const all = [...feed.entries, ...next.entries];
+  expect(new Set(all.map(({ id }) => id)).size).toBe(26);
+  expect(all.map(({ id }) => id)).not.toContain('expedition:stale-party');
+  expect(all.map(({ id }) => id)).toContain('renown:300');
+  expect(JSON.stringify(all)).not.toContain('The Library Within');
+  expect((await call('/guild/feed?before=invalid', { auth: player })).status).toBe(400);
 });

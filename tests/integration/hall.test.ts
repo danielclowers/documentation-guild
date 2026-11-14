@@ -643,3 +643,78 @@ it('lets an Investigator retry a failed deduction once without rerolling its see
       .first('COUNT(*)'),
   ).toBe(1);
 });
+
+it('completes both Chronicle chapters with two players and no random discoveries', async () => {
+  const { characterXpForLevel } = await import('../../packages/shared/src');
+  const db = await expeditionMembers('storylead', 'storypeer');
+  const auth = { id: 'storylead' };
+  const getBoard = async () => (await (await request('/expeditions', auth)).json()) as Board;
+  const getJournal = async (id: string) =>
+    (await (
+      await request('/me/journal', { id })
+    ).json()) as import('../../packages/shared/src').GuildJournal;
+  expect((await getJournal('storylead')).chronicle.map(({ key }) => key)).toEqual(['chapter1']);
+  const create = (mission: string, modifier?: string) =>
+    request('/expeditions', {
+      ...auth,
+      method: 'POST',
+      body: { ...expeditionRole, mission, delay: null, modifier },
+    });
+  expect((await create('inkwell_catacombs')).status).toBe(409);
+  expect((await create('missing_pages', 'corrupted_chronicle')).status).toBe(409);
+  expect((await create('forgotten_archives', 'unknown')).status).toBe(409);
+
+  async function run(mission: string, modifier?: string) {
+    const response = await create(mission, modifier);
+    expect(response.status).toBe(201);
+    const { id } = (await response.json()) as { id: string };
+    expect((await expeditionAction('storypeer', id, 'join', expeditionRole)).status).toBe(200);
+    expect((await expeditionAction('storylead', id, 'start')).status).toBe(200);
+    const expiry = Date.now() - 1000;
+    const duration = (mission === 'missing_pages' ? 10 : 20) * minute;
+    await db
+      .prepare('UPDATE expedition_parties SET started_at = ?, ends_at = ? WHERE id = ?')
+      .bind(expiry - duration, expiry, id)
+      .run();
+    await runExpeditionCron();
+    return (await boardParty('storylead', id))!;
+  }
+
+  const first = await run('missing_pages');
+  expect(first.report?.reward).toMatchObject({ xp: 60, gold: 35 });
+  const altered = await run('forgotten_archives', 'corrupted_chronicle');
+  expect(altered.modifier?.key).toBe('corrupted_chronicle');
+  expect(altered.events).toHaveLength(2);
+  expect(altered.events[1]?.skill).toBe('Research');
+  expect(altered.report?.reward).toMatchObject({ xp: 110, gold: 60 });
+  for (
+    let i = 0;
+    i < 12 && !(await getBoard()).missions.find(({ key }) => key === 'inkwell_catacombs')?.unlocked;
+    i++
+  )
+    await run('forgotten_archives');
+  const unlocked = await getJournal('storylead');
+  expect(unlocked.chronicle.map(({ key }) => key)).toEqual(['chapter1', 'chapter2']);
+  expect(unlocked.chronicle[0]?.recap).toBeTypeOf('string');
+  expect(unlocked.chronicle[1]?.scenes).toHaveLength(1);
+  expect(unlocked.discoveries.map(({ key }) => key)).toEqual(
+    expect.arrayContaining(['missing_chapter', 'unnamed_historian']),
+  );
+  await db
+    .prepare("UPDATE characters SET total_xp = MAX(total_xp, ?) WHERE member_id = 'storylead'")
+    .bind(characterXpForLevel(5))
+    .run();
+  for (let i = 0; i < 18; i++) await run('inkwell_catacombs');
+  const final = await getJournal('cal');
+  expect(final.chronicle[1]).toMatchObject({ expeditions: 18, renown: 720 });
+  expect(final.chronicle[1]?.clues).toHaveLength(3);
+  expect(final.chronicle[1]?.recap).toBeTypeOf('string');
+  expect(final.chronicle[1]?.scenes).toHaveLength(5);
+  expect(final.chains.find(({ key }) => key === 'missing_history')?.discoveries).toHaveLength(3);
+  const recap = (await (
+    await request('/me/recap', auth)
+  ).json()) as import('../../packages/shared/src').GuildRecap;
+  expect(recap.returned).toHaveLength(10);
+  expect(recap.challenges).toBeGreaterThan(18);
+  expect(recap.discoveries).toBe(0);
+}, 30_000);

@@ -1,6 +1,7 @@
 import type { D1Database, RateLimit } from '@cloudflare/workers-types';
 import {
   characterLevel,
+  expeditionDay,
   characterSchema,
   inviteTokenSchema,
   hallStations,
@@ -49,6 +50,9 @@ import {
 } from '../expeditions/parties';
 import { inviteToParty, leaveParty, rescheduleParty, transferParty } from '../expeditions/actions';
 import { resolveEvent } from '../expeditions/events';
+import { playerJournal } from '../story/journal';
+import { guildFeed, readFeedCursor } from '../story/activity';
+import { playerRecap } from '../story/recap';
 
 interface Bindings extends ClerkBindings, HallBindings {
   WEB_URL?: string;
@@ -344,6 +348,35 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
     return c.json(await getProfile(c.env.DB, member, connectedSince));
   });
 
+  members.get('/me/journal', async (c) => {
+    const now = Date.now();
+    await reconcileExpeditions(c.env.DB, now, undefined, checkpointExpedition(c.env));
+    return c.json(await playerJournal(c.env.DB, c.var.member.id));
+  });
+  members.get('/guild/feed', async (c) => {
+    const cursor = readFeedCursor(c.req.query('before'));
+    if (cursor === null) return c.json({ error: { code: 'INVALID_INPUT' } }, 400);
+    return c.json(await guildFeed(c.env.DB, Date.now(), cursor));
+  });
+  members.get('/me/recap', async (c) => {
+    const now = Date.now();
+    const since = z.coerce
+      .number()
+      .int()
+      .nonnegative()
+      .safeParse(c.req.query('since') ?? now - 7 * expeditionDay);
+    if (!since.success) return c.json({ error: { code: 'INVALID_INPUT' } }, 400);
+    await settleGuildMember(c.env, c.var.member.id);
+    return c.json(
+      await playerRecap(
+        c.env.DB,
+        c.var.member.id,
+        Math.max(now - 30 * expeditionDay, Math.min(since.data, now)),
+        now,
+      ),
+    );
+  });
+
   const roleInput = z.object({ role: skillSchema, approach: z.string().max(32) });
   const delayInput = z.union([z.literal(5), z.literal(10), z.literal(15)]);
   members.get('/expeditions', async (c) => {
@@ -354,7 +387,13 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
   members.post('/expeditions', async (c) => {
     const input = await parseBody(
       c,
-      roleInput.extend({ mission: z.string().max(48), delay: delayInput.nullable() }).strict(),
+      roleInput
+        .extend({
+          mission: z.string().max(48),
+          delay: delayInput.nullable(),
+          modifier: z.string().min(1).max(48).optional(),
+        })
+        .strict(),
     );
     if (!input) return c.json({ error: { code: 'INVALID_INPUT' } }, 400);
     const now = Date.now();
@@ -367,6 +406,7 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
       input.approach,
       input.delay,
       now,
+      input.modifier,
     );
     if (!id) return c.json({ error: { code: 'EXPEDITION_CONFLICT' } }, 409);
     return c.json({ id }, 201);
