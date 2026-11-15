@@ -1,6 +1,8 @@
-import { hairColors, hairStyles, tunicColors } from '@guild/shared';
+import { characterSchema, hairColors, hairStyles, tunicColors } from '@guild/shared';
 import type { CharacterAppearance } from '@guild/shared';
-import type { CSSProperties } from 'react';
+import { useState } from 'react';
+import type { CSSProperties, FormEvent } from 'react';
+import { accountError } from './api';
 
 const hairPalette = ['#78442e', '#302830', '#aa5142', '#d2a661', '#b8aeb2'];
 const tunicPalette = ['#527a64', '#656397', '#a05458', '#ae7d40', '#815779'];
@@ -79,5 +81,59 @@ export function CharacterFields({
         </label>
       ))}
     </fieldset>
+  );
+}
+
+export function CharacterEditor({
+  value,
+  onSave,
+  onCancel,
+}: {
+  value: CharacterAppearance;
+  onSave: (appearance: CharacterAppearance) => Promise<void>;
+  onCancel?: () => void;
+}) {
+  const [appearance, setAppearance] = useState<CharacterAppearance>(() => {
+    const { displayName, hairStyle, hairColor, tunicColor } = value;
+    return { displayName, hairStyle, hairColor, tunicColor };
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function save(event: FormEvent) {
+    event.preventDefault();
+    setError('');
+    const result = characterSchema.safeParse(appearance);
+    if (!result.success) {
+      setError(
+        'Use 2 to 24 letters, numbers, spaces, apostrophes, periods, or hyphens for the display name.',
+      );
+      return;
+    }
+    setBusy(true);
+    try {
+      await onSave(result.data);
+    } catch (err) {
+      setError(accountError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="account-form" onSubmit={(event) => void save(event)}>
+      <CharacterFields value={appearance} onChange={setAppearance} />
+      {error && <p role="alert">{error}</p>}
+      <div className="game-actions">
+        <button type="submit" disabled={busy}>
+          Save character
+        </button>
+        {onCancel && (
+          <button type="button" disabled={busy} onClick={onCancel}>
+            Cancel
+          </button>
+        )}
+      </div>
+    </form>
   );
 }

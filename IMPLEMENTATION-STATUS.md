@@ -15,6 +15,12 @@ The attached workspace serves as the project directory. `docs/spec` contains the
 
 The GitHub CLI and SSH both verified `danielclowers`. The project repository is `danielclowers/documentation-guild`. The hosted preview uses the Clerk development instance. Production identity and deployment configuration are still pending.
 
+## Desktop game interface
+
+The signed-in client uses a full-window pixel-art hall, compact HUD, keyboard-accessible menu dock, and one RPG menu at a time. Workstation signs and desks open their assigned action. Player sprites and the online roster open profiles with the existing wave interaction. A menu keeps the hall and its WebSocket mounted, and the character editor, settings, and admin controls remain available.
+
+Playwright opens the signed-in game with fixture API and WebSocket responses. It checks workspace sizing and integer canvas scaling at 1440×900, 1920×1080 and 2560×1440, along with mobile layout, workstation shortcuts, profile clicks, customization, keyboard focus restoration, and uninterrupted socket use. Worker integration separately verifies real multiplayer and progression.
+
 ## Local verification
 
 - `pnpm check` passed lint, strict type checking, six unit tests, fourteen integration tests and the production build. The tests use signed local identities with the real Clerk token verifier and simulate provider account mutations. Vite reported that the lazy-loaded Phaser chunk exceeds its default size warning threshold.

@@ -22,7 +22,7 @@ If pnpm reports `EACCES` renaming a package under the mounted workspace, put its
 pnpm install --frozen-lockfile --virtual-store-dir /tmp/documentation-guild-virtual-store --store-dir /tmp/documentation-guild-pnpm-store
 ```
 
-If the Playwright preview stalls while checking an unused loopback port, start it with `pnpm --filter @guild/web preview --host 127.0.0.1 --port 4173 --strictPort` before running `pnpm test:e2e` in another terminal.
+Playwright uses the production preview on loopback port 4173 and a Vite dev server on loopback port 4174 for the signed-in UI fixture. If the readiness check stalls, start the two servers with `pnpm --filter @guild/web preview --host 127.0.0.1 --port 4173 --strictPort` and `pnpm --filter @guild/web dev --host 127.0.0.1 --port 4174 --strictPort` before running `pnpm test:e2e`. Set `GUILD_UI_SCREENSHOTS=1` to capture the hall and journal at the test viewports. The fixture uses synthetic profiles and lives outside the published build.
 
 In another terminal, start the Worker with local D1 storage.
 

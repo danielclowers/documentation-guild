@@ -1,18 +1,12 @@
 import { ClerkProvider, useAuth, useClerk, useSignIn } from '@clerk/react';
 import { characterSchema, passwordSchema, usernameSchema } from '@guild/shared';
-import type { GuildProfile } from '@guild/shared';
+import type { CharacterAppearance, GuildProfile } from '@guild/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { accountApi, accountError, GuildApiError } from './api';
-import { AdminPanel } from './admin';
-import { GuildBusiness } from './business';
-import { Training } from './training';
-import { StandingOrders } from './standing-orders';
 import { PasswordSettings, RecoveryForm } from './password';
-import { Expeditions } from '../expeditions/board';
-import { GuildNoticeboard, Journal, WhileYouWereAway } from '../story/panels';
-import { LiveHall } from '../hall/live-hall';
-import { AvatarPreview, CharacterFields, startingAppearance } from './character';
+import { CharacterEditor, CharacterFields, startingAppearance } from './character';
+import { GuildGame } from '../game/guild-game';
 
 interface AccessProps {
   apiUrl: string;
@@ -20,6 +14,8 @@ interface AccessProps {
   recovery?: string | null;
   recoveryComplete?: boolean;
   onEnter?: (inside: boolean) => void;
+  showHelp?: boolean;
+  onDismissHelp?: () => void;
 }
 
 function SignInForm({ apiUrl, invitation, recoveryComplete }: AccessProps) {
@@ -161,7 +157,14 @@ function SignInForm({ apiUrl, invitation, recoveryComplete }: AccessProps) {
   );
 }
 
-function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessProps) {
+function MemberAccess({
+  apiUrl,
+  invitation,
+  recoveryComplete,
+  onEnter,
+  showHelp,
+  onDismissHelp,
+}: AccessProps) {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const { signOut } = useClerk();
   const request = useMemo(() => accountApi(apiUrl, getToken), [apiUrl, getToken]);
@@ -172,11 +175,8 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
     progressVersion.current++;
     setProfile(next);
   }
-  const [appearance, setAppearance] = useState(startingAppearance);
-  const [editing, setEditing] = useState(false);
   const [error, setError] = useState('');
   const [signOutError, setSignOutError] = useState('');
-  const [busy, setBusy] = useState(false);
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
@@ -229,29 +229,22 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
     };
   }, [isSignedIn, Boolean(profile?.character), request, hallConnected]);
 
-  async function save(event: FormEvent) {
-    event.preventDefault();
-    setError('');
-    const validated = characterSchema.safeParse(appearance);
-    if (!validated.success) {
-      setError(
-        'Use 2 to 24 letters, numbers, spaces, apostrophes, periods, or hyphens for the display name.',
-      );
-      return;
-    }
-    setBusy(true);
-    try {
-      const data = await request<GuildProfile>('/me/character', {
-        method: 'PATCH',
-        body: JSON.stringify(validated.data),
-      });
-      updateProgress(data);
-      setEditing(false);
-    } catch (err) {
-      setError(accountError(err));
-    } finally {
-      setBusy(false);
-    }
+  async function saveAppearance(appearance: CharacterAppearance) {
+    const data = await request<GuildProfile>('/me/character', {
+      method: 'PATCH',
+      body: JSON.stringify(appearance),
+    });
+    updateProgress(data);
+  }
+
+  function exitGuild() {
+    void signOut()
+      .then(() => {
+        setProfile(undefined);
+        setError('');
+        setSignOutError('');
+      })
+      .catch(() => setSignOutError('Sign-out failed. Try again.'));
   }
 
   const inside = Boolean(isSignedIn && profile?.character);
@@ -265,111 +258,51 @@ function MemberAccess({ apiUrl, invitation, recoveryComplete, onEnter }: AccessP
     return (
       <SignInForm apiUrl={apiUrl} invitation={invitation} recoveryComplete={recoveryComplete} />
     );
-  const character = profile?.character;
+  if (profile?.character) {
+    return (
+      <GuildGame
+        apiUrl={apiUrl}
+        profile={{ ...profile, character: profile.character }}
+        request={request}
+        onChange={updateProgress}
+        onConnection={updateHallConnection}
+        onSaveAppearance={saveAppearance}
+        onSignOut={exitGuild}
+        showHelp={showHelp}
+        onDismissHelp={onDismissHelp}
+        accountSettings={
+          <>
+            <PasswordSettings />
+            {signOutError && <p role="alert">{signOutError}</p>}
+          </>
+        }
+      />
+    );
+  }
   return (
-    <div className={inside ? 'member-hall-layout' : 'account-panel'}>
-      <div className="account-panel">
-        <h2>{character ? `Welcome, ${character.displayName}` : 'Your guild account'}</h2>
-        {error && <p role="alert">{error}</p>}
-        {signOutError && <p role="alert">{signOutError}</p>}
-        {!profile &&
-          (error ? (
-            <button
-              type="button"
-              onClick={() => {
-                setError('');
-                setRevision((value) => value + 1);
-              }}
-            >
-              Try again
-            </button>
-          ) : (
-            <p role="status">Checking guild membership…</p>
-          ))}
-        {profile && (!character || editing) && (
-          <form className="account-form" onSubmit={(event) => void save(event)}>
-            <CharacterFields value={appearance} onChange={setAppearance} />
-            <button type="submit" disabled={busy}>
-              Save character
-            </button>
-            {character && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditing(false);
-                  setError('');
-                }}
-              >
-                Cancel
-              </button>
-            )}
-          </form>
-        )}
-        {character && !editing && (
-          <div className="profile-summary">
-            <AvatarPreview appearance={character} />
-            <p>
-              Level {character.level} · {character.xp} XP · {character.gold} gold
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                const { displayName, hairStyle, hairColor, tunicColor } = character;
-                setAppearance({ displayName, hairStyle, hairColor, tunicColor });
-                setEditing(true);
-              }}
-            >
-              Edit character
-            </button>
-          </div>
-        )}
-        {character && (
-          <WhileYouWereAway key={character.id} characterId={character.id} request={request} />
-        )}
-        {character && (
-          <StandingOrders
-            character={character}
-            request={request}
-            onChange={updateProgress}
-            hallConnected={hallConnected}
-          />
-        )}
-        {character && (
-          <Training character={character} request={request} onChange={updateProgress} />
-        )}
-        {character && profile && (
-          <Expeditions request={request} profile={profile} onChange={updateProgress} />
-        )}
-        {character && <GuildBusiness request={request} onChange={updateProgress} />}
-        {character && <Journal request={request} />}
-        {character && <GuildNoticeboard request={request} />}
-        {profile && <PasswordSettings />}
-        {profile?.role === 'admin' && <AdminPanel request={request} />}
+    <div className="account-panel">
+      <h2>Your guild account</h2>
+      {error && <p role="alert">{error}</p>}
+      {signOutError && <p role="alert">{signOutError}</p>}
+      {profile ? (
+        <CharacterEditor value={startingAppearance} onSave={saveAppearance} />
+      ) : error ? (
         <button
           type="button"
-          onClick={() =>
-            void signOut()
-              .then(() => {
-                setProfile(undefined);
-                setAppearance(startingAppearance);
-                setEditing(false);
-                setError('');
-                setSignOutError('');
-              })
-              .catch(() => setSignOutError('Sign-out failed. Try again.'))
-          }
+          onClick={() => {
+            setError('');
+            setRevision((value) => value + 1);
+          }}
         >
-          Sign out
+          Try again
         </button>
-      </div>
-      {inside && profile && (
-        <LiveHall
-          apiUrl={apiUrl}
-          request={request}
-          memberId={profile.memberId}
-          onConnection={updateHallConnection}
-        />
+      ) : (
+        <p role="status">Checking guild membership…</p>
       )}
+      {profile && <PasswordSettings />}
+      <button type="button" onClick={exitGuild}>
+        Sign out
+      </button>
     </div>
   );
 }

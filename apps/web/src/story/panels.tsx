@@ -28,12 +28,12 @@ function Discovery({ item }: { item: JournalDiscovery }) {
   );
 }
 
-export function Journal({ request }: { request: AccountApi }) {
-  const [open, setOpen] = useState(false);
+export function Journal({ request, visible }: { request: AccountApi; visible: boolean }) {
+  const [page, setPage] = useState<'discoveries' | 'chronicle'>('discoveries');
   const [journal, setJournal] = useState<GuildJournal>();
   const [error, setError] = useState('');
   useEffect(() => {
-    if (!open) return;
+    if (!visible) return;
     const controller = new AbortController();
     setError('');
     void request<GuildJournal>('/me/journal', { signal: controller.signal })
@@ -44,84 +44,102 @@ export function Journal({ request }: { request: AccountApi }) {
         if (!controller.signal.aborted) setError(accountError(err));
       });
     return () => controller.abort();
-  }, [open, request]);
+  }, [visible, request]);
 
   return (
-    <details
-      className="guild-admin story-panel"
-      id="personal-journal"
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-    >
-      <summary>Journal &amp; Chronicle</summary>
+    <div className="story-panel panel-content">
       {error && <p role="alert">{error}</p>}
       {!journal && !error && <p role="status">Opening your journal…</p>}
       {journal && (
         <>
-          <div className="help-heading">
-            <h3>Your discoveries</h3>
-            <HelpTip topic="your discoveries">
-              Find personal discoveries through Guild Business and expedition challenges. Chronicle
-              clues are shared by the whole guild.
-            </HelpTip>
+          <div className="rpg-pages" role="group" aria-label="Journal pages">
+            <button
+              type="button"
+              aria-pressed={page === 'discoveries'}
+              onClick={() => setPage('discoveries')}
+            >
+              My Journal
+            </button>
+            <button
+              type="button"
+              aria-pressed={page === 'chronicle'}
+              onClick={() => setPage('chronicle')}
+            >
+              Guild Chronicle
+            </button>
           </div>
-          {journal.discoveries.length ? (
-            <ul className="story-list">
-              {journal.discoveries.map((item) => (
-                <Discovery key={item.key} item={item} />
-              ))}
-            </ul>
-          ) : (
-            <p>Your discoveries will be recorded here.</p>
-          )}
-          <h3>Mysteries</h3>
-          {journal.chains.map((chain) => (
-            <details key={chain.key} className="story-entry">
-              <summary>
-                {chain.title} · {chain.discoveries.length}/{chain.steps} clues
-              </summary>
-              {chain.discoveries.length ? (
-                <ol className="story-list">
-                  {chain.discoveries.map(({ step, ...item }) => (
-                    <li key={item.key} value={step}>
-                      <strong>{item.title}</strong>
-                      <p>{item.text}</p>
-                    </li>
+          {page === 'discoveries' ? (
+            <section className="parchment">
+              <div className="help-heading">
+                <h3>Your discoveries</h3>
+                <HelpTip topic="your discoveries">
+                  Find personal discoveries through Guild Business and expedition challenges.
+                  Chronicle clues are shared by the whole guild.
+                </HelpTip>
+              </div>
+              {journal.discoveries.length ? (
+                <ul className="story-list">
+                  {journal.discoveries.map((item) => (
+                    <Discovery key={item.key} item={item} />
                   ))}
-                </ol>
+                </ul>
               ) : (
-                <p>No clues recorded yet.</p>
+                <p>Your discoveries will be recorded here.</p>
               )}
-            </details>
-          ))}
-          <h3>The Unwritten Chronicle</h3>
-          {journal.chronicle.map((chapter) => (
-            <article key={chapter.key} className="story-entry">
-              <h4>{chapter.title}</h4>
-              <p>{chapter.intro}</p>
-              <ul>
-                <li>
-                  {chapter.expeditions}/{chapter.targetExpeditions} expeditions
-                </li>
-                <li>
-                  {chapter.renown}/{chapter.targetRenown} chapter renown
-                </li>
-                <li>
-                  {chapter.clues.length}/{chapter.targetClues} story clues
-                </li>
-              </ul>
-              {chapter.scenes.map((scene) => (
-                <p key={scene.key}>{scene.text}</p>
+              <h3>Mysteries</h3>
+              {journal.chains.map((chain) => (
+                <details key={chain.key} className="story-entry">
+                  <summary>
+                    {chain.title} · {chain.discoveries.length}/{chain.steps} clues
+                  </summary>
+                  {chain.discoveries.length ? (
+                    <ol className="story-list">
+                      {chain.discoveries.map(({ step, ...item }) => (
+                        <li key={item.key} value={step}>
+                          <strong>{item.title}</strong>
+                          <p>{item.text}</p>
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p>No clues recorded yet.</p>
+                  )}
+                </details>
               ))}
-              {chapter.recap && (
-                <p>
-                  <strong>Chapter complete.</strong> {chapter.recap}
-                </p>
-              )}
-            </article>
-          ))}
+            </section>
+          ) : (
+            <section className="parchment">
+              <h3>The Unwritten Chronicle</h3>
+              {journal.chronicle.map((chapter) => (
+                <article key={chapter.key} className="story-entry">
+                  <h4>{chapter.title}</h4>
+                  <p>{chapter.intro}</p>
+                  <ul>
+                    <li>
+                      {chapter.expeditions}/{chapter.targetExpeditions} expeditions
+                    </li>
+                    <li>
+                      {chapter.renown}/{chapter.targetRenown} chapter renown
+                    </li>
+                    <li>
+                      {chapter.clues.length}/{chapter.targetClues} story clues
+                    </li>
+                  </ul>
+                  {chapter.scenes.map((scene) => (
+                    <p key={scene.key}>{scene.text}</p>
+                  ))}
+                  {chapter.recap && (
+                    <p>
+                      <strong>Chapter complete.</strong> {chapter.recap}
+                    </p>
+                  )}
+                </article>
+              ))}
+            </section>
+          )}
         </>
       )}
-    </details>
+    </div>
   );
 }
 
@@ -138,8 +156,7 @@ function activityText(entry: GuildActivity) {
   }
 }
 
-export function GuildNoticeboard({ request }: { request: AccountApi }) {
-  const [open, setOpen] = useState(false);
+export function GuildNoticeboard({ request, visible }: { request: AccountApi; visible: boolean }) {
   const [feed, setFeed] = useState<GuildFeed>();
   const [older, setOlder] = useState<GuildActivity[]>([]);
   const [next, setNext] = useState<string>();
@@ -147,7 +164,7 @@ export function GuildNoticeboard({ request }: { request: AccountApi }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!open) return;
+    if (!visible) return;
     const controller = new AbortController();
     setError('');
     void request<GuildFeed>('/guild/feed', { signal: controller.signal })
@@ -161,7 +178,7 @@ export function GuildNoticeboard({ request }: { request: AccountApi }) {
         if (!controller.signal.aborted) setError(accountError(err));
       });
     return () => controller.abort();
-  }, [open, request]);
+  }, [visible, request]);
 
   async function showOlder() {
     if (!next || busy) return;
@@ -180,11 +197,7 @@ export function GuildNoticeboard({ request }: { request: AccountApi }) {
 
   const entries = [...(feed?.entries ?? []), ...older];
   return (
-    <details
-      className="guild-admin story-panel"
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-    >
-      <summary>Guild activity</summary>
+    <div className="story-panel panel-content">
       {feed && <p>Guild renown · {feed.renown.toLocaleString()}</p>}
       {error && <p role="alert">{error}</p>}
       {!feed && !error && <p role="status">Reading the noticeboard…</p>}
@@ -211,25 +224,11 @@ export function GuildNoticeboard({ request }: { request: AccountApi }) {
           Older activity
         </button>
       )}
-    </details>
+    </div>
   );
 }
 
-function openPanel(id: string) {
-  const panel = document.getElementById(id);
-  if (panel instanceof HTMLDetailsElement) {
-    panel.open = true;
-    panel.querySelector('summary')?.focus();
-  }
-}
-
-export function WhileYouWereAway({
-  request,
-  characterId,
-}: {
-  request: AccountApi;
-  characterId: string;
-}) {
+export function useGuildRecap(request: AccountApi, characterId: string) {
   const [recap, setRecap] = useState<GuildRecap>();
   useEffect(() => {
     const controller = new AbortController();
@@ -268,9 +267,22 @@ export function WhileYouWereAway({
     ].some(Boolean)
   )
     return null;
+  return recap;
+}
+
+export function WhileYouWereAway({
+  recap,
+  onExpeditions,
+  onJournal,
+}: {
+  recap: GuildRecap | null;
+  onExpeditions: () => void;
+  onJournal: () => void;
+}) {
+  if (!recap) return null;
+
   return (
-    <details className="guild-admin story-panel">
-      <summary>While you were away</summary>
+    <div className="story-panel panel-content">
       <ul className="story-list">
         {recap.standing.xp > 0 && (
           <li>
@@ -291,11 +303,15 @@ export function WhileYouWereAway({
         )}
       </ul>
       {(recap.returned.length > 0 || recap.challenges > 0 || recap.invitations > 0) && (
-        <button onClick={() => openPanel('expedition-board')}>Open Expedition Board</button>
+        <button type="button" onClick={onExpeditions}>
+          Open Expedition Board
+        </button>
       )}
       {(recap.discoveries > 0 || recap.milestones > 0) && (
-        <button onClick={() => openPanel('personal-journal')}>Open journal</button>
+        <button type="button" onClick={onJournal}>
+          Open journal
+        </button>
       )}
-    </details>
+    </div>
   );
 }

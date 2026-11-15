@@ -138,6 +138,11 @@ export function hallNameplate(scene: Phaser.Scene) {
       plate.setPosition(left, top);
       fallback?.setPosition(left + 3, top + 2);
     },
+    contains(x: number, y: number) {
+      return (
+        plate.visible && x >= plate.x && x < plate.x + width && y >= plate.y && y < plate.y + height
+      );
+    },
     setVisible(visible: boolean) {
       plate.setVisible(visible);
       fallback?.setVisible(visible && usesFallback);

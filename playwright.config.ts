@@ -12,9 +12,16 @@ export default defineConfig({
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
     { name: 'mobile', use: { ...devices['Pixel 7'], defaultBrowserType: 'chromium' } },
   ],
-  webServer: {
-    command: `pnpm --filter @guild/web preview --host 127.0.0.1 --port ${port} --strictPort`,
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: `pnpm --filter @guild/web preview --host 127.0.0.1 --port ${port} --strictPort`,
+      url: baseURL,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: 'pnpm --filter @guild/web dev --host 127.0.0.1 --port 4174 --strictPort',
+      url: 'http://127.0.0.1:4174/documentation-guild/test/guild-game.html',
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
 });

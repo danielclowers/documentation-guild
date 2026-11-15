@@ -62,6 +62,19 @@ const questions = [
   ],
 ] as const;
 
+export function FAQ() {
+  return (
+    <div className="faq">
+      {questions.map(([question, answer]) => (
+        <details key={question}>
+          <summary>{question}</summary>
+          <p>{answer}</p>
+        </details>
+      ))}
+    </div>
+  );
+}
+
 export function HelpPage() {
   return (
     <main className="help-page" aria-labelledby="help-title">
@@ -69,12 +82,7 @@ export function HelpPage() {
       <h1 id="help-title" tabIndex={-1}>
         Help &amp; FAQ
       </h1>
-      {questions.map(([question, answer]) => (
-        <details key={question}>
-          <summary>{question}</summary>
-          <p>{answer}</p>
-        </details>
-      ))}
+      <FAQ />
     </main>
   );
 }

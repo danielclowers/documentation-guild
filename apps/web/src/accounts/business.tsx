@@ -166,12 +166,13 @@ function CaseForm({
 
 export function GuildBusiness({
   request,
+  visible,
   onChange,
 }: {
   request: AccountApi;
+  visible: boolean;
   onChange: (profile: GuildProfile) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [cases, setCases] = useState<BusinessCase[]>();
   const [selected, setSelected] = useState<string>();
   const [reward, setReward] = useState<BusinessReward>();
@@ -191,11 +192,11 @@ export function GuildBusiness({
   );
 
   useEffect(() => {
-    if (!open) return;
+    if (!visible) return;
     const controller = new AbortController();
     void load(controller.signal);
     return () => controller.abort();
-  }, [open, load]);
+  }, [visible, load]);
 
   async function submit(answer: BusinessAnswer) {
     if (!active || busy) return;
@@ -228,11 +229,7 @@ export function GuildBusiness({
   }
 
   return (
-    <details
-      className="guild-admin business"
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-    >
-      <summary>Guild Business</summary>
+    <div className="business panel-content">
       <div className="help-heading">
         <span>Personal cases</span>
         <HelpTip topic="Guild Business">
@@ -301,6 +298,6 @@ export function GuildBusiness({
       ) : (
         !error && <p role="status">Loading cases…</p>
       )}
-    </details>
+    </div>
   );
 }

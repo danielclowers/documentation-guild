@@ -3,7 +3,7 @@ import type Phaser from 'phaser';
 import type { HallVisualState } from './canvas';
 import { hallNameplate } from './nameplate';
 
-type Point = { x: number; y: number };
+import type { Point } from './geometry';
 const ENTRANCE = { x: 176, y: 211 };
 const HAIR = [0x78442e, 0x302830, 0xaa5142, 0xd2a661, 0xb8aeb2];
 const TUNIC = [0x527a64, 0x656397, 0xa05458, 0xae7d40, 0x815779];
@@ -80,7 +80,9 @@ export function hallSprites(scene: Phaser.Scene) {
       away: boolean;
     }
   >();
-  return ({ members, reducedMotion, wave }: HallVisualState) => {
+  const targets = new Map<string, Point>();
+  function draw({ members, reducedMotion, wave }: HallVisualState) {
+    targets.clear();
     const now = Date.now();
     const ids = new Set(members.map(({ id }) => id));
     for (const [id, sprite] of sprites) {
@@ -124,6 +126,7 @@ export function hallSprites(scene: Phaser.Scene) {
         : Math.floor((now + member.slot * 317) / (walking ? 105 : 470)) % 2;
       const x = Math.round(point.x);
       const y = Math.round(point.y);
+      targets.set(member.id, { x, y });
       const { drawing, label } = sprite;
       const hair = HAIR[member.hairColor] ?? HAIR[0] ?? 0;
       const tunic = TUNIC[member.tunicColor] ?? TUNIC[0] ?? 0;
@@ -149,12 +152,33 @@ export function hallSprites(scene: Phaser.Scene) {
       if (!walking && member.station !== 'Lounge')
         drawing.fillStyle(0xf0d19e).fillRect(x + 4, y - 7 + phase, 4, 2);
       const waving = wave?.memberId === member.id && now - wave.at < 2400;
+      const stagger =
+        targets.size > 1 &&
+        [...targets].some(
+          ([id, other]) =>
+            id !== member.id && Math.abs(other.x - x) < 42 && Math.abs(other.y - y) < 12,
+        );
       label.place(
         waving ? `${member.displayName} waves` : member.displayName,
         x,
-        y - 23 - (member.slot % 2) * 12,
+        y - 23 - (stagger ? 12 : 0),
         scene.scale.width,
       );
     }
-  };
+  }
+  function memberAt({ x, y }: Point) {
+    let front = -Infinity;
+    let id: string | undefined;
+    for (const [candidate, point] of targets) {
+      if (Math.abs(x - point.x) <= 8 && y >= point.y - 22 && y <= point.y + 2 && point.y >= front) {
+        front = point.y;
+        id = candidate;
+      }
+    }
+    if (id) return id;
+    for (const candidate of [...targets.keys()].reverse()) {
+      if (sprites.get(candidate)?.label.contains(x, y)) return candidate;
+    }
+  }
+  return { draw, memberAt };
 }

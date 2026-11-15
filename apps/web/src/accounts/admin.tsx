@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import type { GuildInvitation, GuildMember } from '@guild/shared';
 import { accountError, type AccountApi } from './api';
 
-export function AdminPanel({ request }: { request: AccountApi }) {
-  const [open, setOpen] = useState(false);
+export function AdminPanel({ request, visible }: { request: AccountApi; visible: boolean }) {
   const [invitations, setInvitations] = useState<GuildInvitation[]>([]);
   const [members, setMembers] = useState<GuildMember[]>([]);
   const [link, setLink] = useState('');
@@ -15,7 +14,7 @@ export function AdminPanel({ request }: { request: AccountApi }) {
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
-    if (!open) return;
+    if (!visible) return;
     const controller = new AbortController();
     const options = { signal: controller.signal };
     void Promise.all([
@@ -32,7 +31,7 @@ export function AdminPanel({ request }: { request: AccountApi }) {
         if (!controller.signal.aborted) setError(accountError(err));
       });
     return () => controller.abort();
-  }, [open, request, revision]);
+  }, [visible, request, revision]);
 
   async function update(action: () => Promise<void>) {
     setBusy(true);
@@ -49,8 +48,7 @@ export function AdminPanel({ request }: { request: AccountApi }) {
   }
 
   return (
-    <details className="guild-admin" onToggle={(event) => setOpen(event.currentTarget.open)}>
-      <summary>Guild administration</summary>
+    <div className="administration panel-content">
       <h3>Invitations</h3>
       <button
         type="button"
@@ -179,6 +177,6 @@ export function AdminPanel({ request }: { request: AccountApi }) {
           </li>
         ))}
       </ul>
-    </details>
+    </div>
   );
 }

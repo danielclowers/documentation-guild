@@ -9,14 +9,16 @@ export function StandingOrders({
   request,
   onChange,
   hallConnected,
+  suggested,
 }: {
   character: NonNullable<GuildProfile['character']>;
   request: AccountApi;
   onChange: (profile: GuildProfile) => void;
   hallConnected: boolean;
+  suggested?: Skill;
 }) {
-  const { order, skills, latestReward } = character.progression;
-  const [choice, setChoice] = useState<Skill | ''>('');
+  const { order, latestReward } = character.progression;
+  const [choice, setChoice] = useState<Skill | ''>(suggested ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const selection = choice || order?.skill || '';
@@ -96,24 +98,18 @@ export function StandingOrders({
         </p>
       )}
       <p>Earn while connected to the hall, even when idle.</p>
-      <h3>Skills</h3>
-      <ul>
-        {skillSchema.options.map((skill) => (
-          <li key={skill}>
-            {skill} · Lv {skills[skill].level} · {skills[skill].xp} XP
-          </li>
-        ))}
-      </ul>
     </section>
   );
 }
 
-function PayoutTimer({
+export function PayoutTimer({
   order,
   hallConnected,
+  compact = false,
 }: {
   order: NonNullable<NonNullable<GuildProfile['character']>['progression']['order']>;
   hallConnected: boolean;
+  compact?: boolean;
 }) {
   const running = order.running && hallConnected;
   const [seconds, setSeconds] = useState(() => Math.ceil(order.remainingMs / 1000));
@@ -131,12 +127,16 @@ function PayoutTimer({
   }, [order, running, hallConnected]);
   const duration = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
   return (
-    <p className="order-timer">
+    <span className="order-timer">
       {running
         ? seconds > 0
-          ? `Next payout in ${duration}`
+          ? compact
+            ? duration
+            : `Next payout in ${duration}`
           : 'Confirming payout…'
-        : `Paused · ${duration} remaining`}
-    </p>
+        : compact
+          ? `Paused · ${duration}`
+          : `Paused · ${duration} remaining`}
+    </span>
   );
 }

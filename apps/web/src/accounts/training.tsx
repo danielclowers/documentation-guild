@@ -59,8 +59,7 @@ export function Training({
   }
 
   return (
-    <details className="guild-admin training">
-      <summary>Training &amp; specialization</summary>
+    <div className="training panel-content">
       <div className="help-heading">
         <h3>Training</h3>
         <HelpTip topic="Training">
@@ -140,6 +139,6 @@ export function Training({
       </button>
       {message && <p role="status">{message}</p>}
       {error && <p role="alert">{error}</p>}
-    </details>
+    </div>
   );
 }

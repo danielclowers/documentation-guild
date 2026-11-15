@@ -311,14 +311,15 @@ function PartyCard({
 
 export function Expeditions({
   request,
+  visible,
   profile,
   onChange,
 }: {
   request: AccountApi;
+  visible: boolean;
   profile: GuildProfile;
   onChange: (profile: GuildProfile) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [board, setBoard] = useState<Board>();
   const [key, setKey] = useState('');
   const [modifier, setModifier] = useState('');
@@ -326,12 +327,12 @@ export function Expeditions({
   const [error, setError] = useState('');
   const load = useCallback(async () => setBoard(await request<Board>('/expeditions')), [request]);
   useEffect(() => {
-    if (!open) return;
+    if (!visible) return;
     const refresh = () => void load().catch((err) => setError(accountError(err)));
     refresh();
     const interval = window.setInterval(refresh, 12_000);
     return () => window.clearInterval(interval);
-  }, [open, load]);
+  }, [visible, load]);
 
   async function action(path: string, body: object) {
     setBusy(true);
@@ -362,12 +363,7 @@ export function Expeditions({
         party.roster.some(({ id }) => id === profile.memberId),
     ) ?? false;
   return (
-    <details
-      className="guild-admin expeditions"
-      id="expedition-board"
-      onToggle={(event) => setOpen(event.currentTarget.open)}
-    >
-      <summary>Expedition Board</summary>
+    <div className="expeditions panel-content">
       <div className="help-heading">
         <h3>Cooperative expeditions</h3>
         <HelpTip topic="expeditions">
@@ -490,6 +486,6 @@ export function Expeditions({
           ))}
         </>
       )}
-    </details>
+    </div>
   );
 }

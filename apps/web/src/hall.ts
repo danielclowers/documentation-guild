@@ -2,8 +2,7 @@ import Phaser from 'phaser';
 import type { HallVisualState } from './hall/canvas';
 import { hallSprites } from './hall/sprites';
 
-const WIDTH = 352;
-const HEIGHT = 240;
+import { hallWidth as WIDTH, hallHeight as HEIGHT, type Point } from './hall/geometry';
 const WOOD = [0x7d4b36, 0x89563c, 0x935e42, 0x86513b] as const;
 const BOOKS = [0x954740, 0xa78152, 0x52716a, 0x74764f, 0x654b5e] as const;
 
@@ -36,6 +35,37 @@ function drawHall(graphics: Phaser.GameObjects.Graphics) {
   rect(0x9c674f, 16, 14, 2, 208);
   rect(0x9c674f, 332, 14, 2, 208);
   rect(0x4b2d30, 17, 222, 317, 8);
+
+  // Dark timber and brass trim frame the room using the original hall palette.
+  rect(0x2e212a, 9, 8, 334, 8);
+  rect(0x906148, 12, 11, 328, 2);
+  rect(0x68443d, 20, 15, 312, 4);
+  rect(0x432c35, 20, 25, 312, 4);
+  rect(0xb08058, 20, 29, 312, 1);
+  for (const x of [21, 82, 146, 201, 269, 327]) {
+    rect(0x492f37, x, 16, 7, 13);
+    rect(0x855744, x + 1, 17, 5, 3);
+    rect(0xa87551, x + 3, 20, 1, 2);
+  }
+  for (const x of [12, 334]) {
+    rect(0x33232c, x, 15, 7, 205);
+    rect(0x936146, x + 2, 16, 2, 203);
+    for (const y of [20, 75, 127, 180, 216]) {
+      rect(0x684638, x - 2, y, 10, 5);
+      rect(0xb98352, x, y + 1, 6, 1);
+    }
+  }
+  for (const x of [27, 310]) {
+    rect(0xb48151, x - 3, 35, 20, 2);
+    rect(0x53303c, x, 37, 14, 27);
+    rect(0xa3724d, x, 37, 1, 26);
+    rect(0xa3724d, x + 13, 37, 1, 26);
+    rect(0x53303c, x + 2, 64, 10, 2);
+    rect(0x53303c, x + 4, 66, 6, 2);
+    rect(0xb48151, x + 5, 68, 4, 1);
+    rect(0xc49863, x + 6, 43, 2, 12);
+    rect(0xc49863, x + 3, 48, 8, 2);
+  }
 
   const window = (x: number) => {
     rect(0x3b2c36, x, 35, 26, 30);
@@ -108,6 +138,17 @@ function drawHall(graphics: Phaser.GameObjects.Graphics) {
     rect(0xc79873, x + 1, 164, 3, 3);
   }
 
+  for (const x of [123, 226]) {
+    for (const y of [139, 187]) {
+      rect(0xe0aa76, x, y, 5, 1);
+      rect(0xe0aa76, x, y, 1, 6);
+    }
+  }
+  for (let x = 134; x < 221; x += 7) {
+    rect(0xb88a6c, x, 140, 2, 1);
+    rect(0xb88a6c, x, 190, 2, 1);
+  }
+
   // Hearth, lounge seats and the expedition board.
   rect(0x51353a, 33, 147, 46, 36);
   rect(0x7b6060, 34, 146, 43, 28);
@@ -141,7 +182,7 @@ function drawHall(graphics: Phaser.GameObjects.Graphics) {
   rect(0x29232b, 157, 224, 38, 6);
 }
 
-export function mountHall(parent: HTMLElement, getVisual?: () => HallVisualState): () => void {
+export function mountHall(parent: HTMLElement, getVisual?: () => HallVisualState) {
   let drawSprites: ReturnType<typeof hallSprites> | undefined;
   const game = new Phaser.Game({
     type: Phaser.CANVAS,
@@ -160,12 +201,15 @@ export function mountHall(parent: HTMLElement, getVisual?: () => HallVisualState
         else this.game.events.once(Phaser.Core.Events.POST_RENDER, () => this.game.loop.sleep());
       },
       update() {
-        if (getVisual && !document.hidden) drawSprites?.(getVisual());
+        if (getVisual && !document.hidden) drawSprites?.draw(getVisual());
       },
     },
   });
-  return () => {
-    game.loop.wake();
-    game.destroy(true);
+  return {
+    memberAt: (point: Point) => drawSprites?.memberAt(point),
+    destroy() {
+      game.loop.wake();
+      game.destroy(true);
+    },
   };
 }

@@ -1,34 +1,26 @@
 import { hallStations } from '@guild/shared';
-import type { HallStation } from '@guild/shared';
-import { useEffect, useState } from 'react';
-import { HelpTip } from '../help';
+import type { HallMember, HallStation } from '@guild/shared';
+import { useState } from 'react';
+import { AvatarPreview } from '../accounts/character';
 import { accountError, type AccountApi } from '../accounts/api';
-import { HallCanvas } from './canvas';
-import { useHallConnection } from './connection';
 
-export function LiveHall({
-  apiUrl,
+export function HallSettings({
   request,
-  memberId,
-  onConnection,
+  own,
+  reducedMotion,
+  mute,
+  onMotion,
+  onMute,
 }: {
-  apiUrl: string;
   request: AccountApi;
-  memberId: string;
-  onConnection: (connected: boolean) => void;
+  own?: HallMember;
+  reducedMotion: boolean;
+  mute: boolean;
+  onMotion: (enabled: boolean) => void;
+  onMute: (enabled: boolean) => void;
 }) {
-  const { members, status, wave, sendWave } = useHallConnection(apiUrl, request);
-  useEffect(() => {
-    onConnection(status === 'connected');
-    return () => onConnection(false);
-  }, [onConnection, status]);
-  const [reducedMotion, setReducedMotion] = useState(
-    () => matchMedia('(prefers-reduced-motion: reduce)').matches,
-  );
-  const [mute, setMute] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const own = members.find((member) => member.id === memberId);
 
   async function selectStation(station: HallStation) {
     setBusy(true);
@@ -43,82 +35,118 @@ export function LiveHall({
   }
 
   return (
-    <section className="live-hall" aria-labelledby="live-hall-title">
-      <header className="hall-heading">
-        <h2 id="live-hall-title">Guild Hall</h2>
-        <p role="status">
-          {status === 'connected'
-            ? `${members.length} online`
-            : {
-                connecting: 'Connecting to the hall…',
-                reconnecting: 'Reconnecting to the hall…',
-                denied: 'Guild access ended',
-              }[status]}
-        </p>
-      </header>
-      <HallCanvas members={members} reducedMotion={reducedMotion} wave={mute ? undefined : wave} />
-      <div className="hall-controls">
-        <label>
-          Hall station
-          <select
-            value={own?.station ?? 'Lounge'}
-            disabled={!own || Boolean(own.expeditionAt) || busy}
-            onChange={(event) => {
-              const station = hallStations.find((item) => item === event.currentTarget.value);
-              if (station) void selectStation(station);
-            }}
-          >
-            {hallStations.map((station) => (
-              <option key={station}>{station}</option>
-            ))}
-          </select>
-        </label>
-        <HelpTip topic="Hall station">
-          Move your avatar around the hall. To change the skill you earn XP in, choose a Standing
-          order.
-        </HelpTip>
-        <button type="button" disabled={!own} onClick={sendWave}>
-          Wave
-        </button>
-        <details>
-          <summary>Hall settings</summary>
-          <label>
-            <input
-              type="checkbox"
-              checked={reducedMotion}
-              onChange={(event) => setReducedMotion(event.currentTarget.checked)}
-            />{' '}
-            Reduce motion
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={mute}
-              onChange={(event) => setMute(event.currentTarget.checked)}
-            />{' '}
-            Mute waves
-          </label>
-        </details>
-      </div>
+    <section className="panel-content">
+      <h3>Hall settings</h3>
+      <label htmlFor="hall-station">Hall station</label>
+      <select
+        id="hall-station"
+        value={own?.station ?? 'Lounge'}
+        disabled={!own || Boolean(own.expeditionAt) || busy}
+        onChange={(event) => {
+          const station = hallStations.find((item) => item === event.currentTarget.value);
+          if (station) void selectStation(station);
+        }}
+      >
+        {hallStations.map((station) => (
+          <option key={station}>{station}</option>
+        ))}
+      </select>
+      <p>Choose where your character stands. Your standing order keeps its current assignment.</p>
       {error && <p role="alert">{error}</p>}
-      {members.length > 0 && (
-        <ul className="hall-roster" aria-label="Online guild members">
-          {members.map((member) => (
-            <li key={member.id}>
-              <details>
-                <summary>
-                  {member.displayName}
-                  {member.id === memberId && ' (you)'}
-                </summary>
+      <div className="game-checks">
+        <label>
+          <input
+            type="checkbox"
+            checked={reducedMotion}
+            onChange={(event) => onMotion(event.currentTarget.checked)}
+          />{' '}
+          Reduce motion
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={mute}
+            onChange={(event) => onMute(event.currentTarget.checked)}
+          />{' '}
+          Mute waves
+        </label>
+      </div>
+    </section>
+  );
+}
+
+export function HallMembers({
+  members,
+  memberId,
+  selected,
+  onSelect,
+  onWave,
+  onCharacter,
+}: {
+  members: HallMember[];
+  memberId: string;
+  selected?: string;
+  onSelect: (id?: string) => void;
+  onWave: () => void;
+  onCharacter: () => void;
+}) {
+  const member = members.find((item) => item.id === selected);
+  const own = members.some(({ id }) => id === memberId);
+  if (member)
+    return (
+      <div className="panel-content">
+        <button type="button" onClick={() => onSelect()}>
+          Back to guild members
+        </button>
+        <article className="member-profile">
+          <AvatarPreview appearance={member} />
+          <div>
+            <h3>{member.displayName}</h3>
+            <p>
+              Level {member.level} · {member.presence === 'idle' ? 'Idle' : 'Online'}
+            </p>
+            <p>{member.expeditionAt ? 'On expedition' : member.station}</p>
+          </div>
+        </article>
+        {member.id === memberId ? (
+          <button type="button" onClick={onCharacter}>
+            Character &amp; Skills
+          </button>
+        ) : (
+          <button type="button" disabled={!own} onClick={onWave}>
+            Wave to the hall
+          </button>
+        )}
+      </div>
+    );
+  return (
+    <div className="panel-content">
+      {selected && <p role="status">This guild member is no longer connected.</p>}
+      {members.length ? (
+        <ul className="member-buttons" aria-label="Online guild members">
+          {members.map((item) => (
+            <li key={item.id}>
+              <button type="button" onClick={() => onSelect(item.id)}>
+                <AvatarPreview appearance={item} />
                 <span>
-                  Level {member.level} · {member.expeditionAt ? 'On expedition' : member.station} ·{' '}
-                  {member.presence === 'idle' ? 'Idle' : 'Online'}
+                  <strong>
+                    {item.displayName}
+                    {item.id === memberId && ' (you)'}
+                  </strong>
+                  <small>
+                    Level {item.level} · {item.expeditionAt ? 'On expedition' : item.station}
+                  </small>
                 </span>
-              </details>
+              </button>
             </li>
           ))}
         </ul>
+      ) : (
+        <p>Nobody is connected to the hall.</p>
       )}
-    </section>
+      <button type="button" disabled={!own} onClick={onWave}>
+        Wave to the hall
+      </button>
+    </div>
   );
 }
