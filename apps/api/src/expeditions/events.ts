@@ -3,6 +3,7 @@ import type { ExpeditionSnapshot } from './content';
 import type { Skill } from '@guild/shared';
 import {
   challengeChance,
+  challengeDiscoveryChance,
   expeditionEvents,
   missions,
   modifiers,
@@ -90,21 +91,24 @@ export async function resolveEvent(
   const gold = success ? 5 + bonusGoldRoll : 0;
   const resolution = crypto.randomUUID();
   const discovery = optionalDiscovery(roll(party.seed, key + ':item'));
-  const discoveryChance = Math.min(
-    30,
-    12 +
-      (member.role === 'Research' ? 5 : 0) +
-      (member.approach === 'curious' ? 5 : 0) +
-      (party.modifier === 'missing_references' && event.skill === 'Research' ? 5 : 0) +
-      (event.skill === 'Research' && snapshot.specialization === 'Archivist' ? 8 : 0),
+  const discoveryChance = challengeDiscoveryChance(
+    event.skill,
+    snapshot,
+    member.role,
+    member.approach,
+    modifier,
   );
+  const found =
+    success &&
+    option.effect === 'discovery_chance' &&
+    roll(party.seed, key + ':discover') % 100 < discoveryChance;
   const sharedDiscovery = optionalDiscovery(roll(party.seed, 'shared-item'));
   // Use a request marker so a concurrent replay cannot run any payout statements.
   const statements = [
     retry
       ? db
           .prepare(
-            `UPDATE expedition_events SET option_id = ?, success = ?, renown = ?, resolved_at = ?, resolution_id = ?, retried = 1
+            `UPDATE expedition_events SET option_id = ?, success = ?, renown = ?, resolved_at = ?, resolution_id = ?, discovery_roll_key = ?, retried = 1
         WHERE party_id = ? AND member_id = ? AND slot = ? AND success = 0 AND option_id <> ?
         AND NOT EXISTS (SELECT 1 FROM expedition_events WHERE party_id = ? AND member_id = ? AND retried = 1)
         AND EXISTS (SELECT 1 FROM expedition_parties WHERE id = ? AND state IN ('running','completed'))
@@ -116,6 +120,7 @@ export async function resolveEvent(
             renown,
             now,
             resolution,
+            found ? discovery.key : null,
             partyId,
             memberId,
             slot,
@@ -127,8 +132,8 @@ export async function resolveEvent(
           )
       : db
           .prepare(
-            `INSERT OR IGNORE INTO expedition_events (party_id, member_id, slot, option_id, success, renown, resolved_at, resolution_id)
-      SELECT ?, ?, ?, ?, ?, ?, ?, ? FROM members m JOIN expedition_parties p ON p.id = ?
+            `INSERT OR IGNORE INTO expedition_events (party_id, member_id, slot, option_id, success, renown, resolved_at, resolution_id, discovery_roll_key)
+      SELECT ?, ?, ?, ?, ?, ?, ?, ?, ? FROM members m JOIN expedition_parties p ON p.id = ?
       WHERE m.id = ? AND m.status = 'active' AND p.state IN ('running','completed')`,
           )
           .bind(
@@ -140,6 +145,7 @@ export async function resolveEvent(
             renown,
             now,
             resolution,
+            found ? discovery.key : null,
             partyId,
             memberId,
           ),
@@ -156,11 +162,7 @@ export async function resolveEvent(
       )
       .bind(renown, resolution),
   ];
-  if (
-    success &&
-    option.effect === 'discovery_chance' &&
-    roll(party.seed, key + ':discover') % 100 < discoveryChance
-  ) {
+  if (found) {
     statements.push(
       db
         .prepare(

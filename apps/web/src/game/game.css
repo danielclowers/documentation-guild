@@ -868,3 +868,213 @@
     padding-block: 10px;
   }
 }
+
+.business-allowance,
+.case-preview,
+.case-complete,
+.discovery-notice {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  width: 100%;
+  background: #2e2022;
+  border: 1px solid #a27850;
+}
+
+.business-allowance > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.business-allowance span {
+  color: #f3cf91;
+}
+.business-allowance meter {
+  width: 100%;
+  height: 14px;
+  accent-color: #ead08c;
+}
+.business-allowance small,
+.case-preview small {
+  color: #efdbb9;
+}
+.case-preview {
+  padding: 8px;
+  border-color: #79513d;
+}
+
+.reward-chips {
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  list-style: none;
+}
+
+.reward-chips [role='listitem'] {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 2px 6px;
+  color: #fae7be;
+  background: #21191e;
+  border: 1px solid #835c40;
+  font-size: 0.77rem;
+}
+
+.reward-chips .game-icon {
+  scale: 0.65;
+  color: #edbf75;
+}
+.business-clues {
+  padding-inline-start: 22px;
+}
+.business-sequence li {
+  flex-wrap: wrap;
+}
+.business-sequence strong {
+  flex: 1 1 45%;
+  overflow-wrap: anywhere;
+}
+.business-form label > span {
+  display: grid;
+  gap: 4px;
+}
+.business-form .business-tiles {
+  align-items: stretch;
+}
+
+.case-complete {
+  background: #263a2b;
+  border-color: #98b97d;
+}
+.case-complete h3,
+.rpg-menu .case-complete h3 {
+  color: #def5bb;
+  margin-block: 0 2px;
+}
+.case-complete > div:first-child {
+  display: grid;
+  gap: 7px;
+}
+.case-complete .reward-chips [role='listitem'] {
+  background: #213027;
+  border-color: #768c62;
+}
+
+.discovery-notice {
+  --rarity-edge: #d9c6a4;
+  background: #2a252c;
+  border: 1px solid var(--rarity-edge);
+  box-shadow: inset 3px 0 var(--rarity-edge);
+  padding-inline-start: 13px;
+}
+.discovery-notice .help-heading {
+  flex-wrap: wrap;
+  color: var(--rarity-edge);
+}
+.discovery-rarity {
+  display: inline-block;
+  padding: 1px 5px;
+  color: #f3e6cc;
+  background: #4e423d;
+  border: 1px solid currentColor;
+  text-transform: capitalize;
+  font-size: 0.74rem;
+}
+[data-rarity='uncommon'] {
+  --rarity-edge: #b7dfa1;
+}
+[data-rarity='rare'] {
+  --rarity-edge: #b9d8ff;
+}
+.discovery-rarity[data-rarity='uncommon'],
+.discovery-rarity[data-rarity='rare'] {
+  color: var(--rarity-edge);
+  background: #25312f;
+}
+
+.guild-guide {
+  display: grid;
+  gap: 7px;
+  padding: 13px 16px;
+  border: 2px solid #be8956;
+  box-shadow: 0 0 0 3px #342423;
+  background: #382721;
+  color: #ffebc3;
+}
+.guild-guide[data-in-menu='false'] {
+  position: fixed;
+  bottom: 72px;
+  left: clamp(12px, 2vw, 38px);
+  width: min(calc(100vw - 24px), 410px);
+  z-index: 3;
+}
+.guild-guide[data-in-menu='true'] {
+  margin-bottom: 18px;
+}
+.guild-guide h3 {
+  font: 700 1.48rem var(--game-serif);
+  margin: 0;
+}
+.guild-guide p {
+  margin: 0;
+  line-height: 1.4;
+}
+.guild-guide > small {
+  color: #e9bb81;
+}
+.guild-guide button {
+  border: 1px solid #a57852;
+  background: #e4ba7c;
+  color: #2a1a14;
+  padding: 7px 9px;
+  font-weight: 650;
+}
+.guild-guide .guide-skip {
+  background: #382721;
+  color: #f6d7a5;
+}
+.guide-check {
+  color: #d4edb5;
+}
+.game-dock button[data-guide-target='true'] {
+  border-color: #ffe4a2;
+  box-shadow:
+    inset 0 0 0 1px #d7ac70,
+    0 0 8px #ffa95b;
+}
+.game-dock button[data-attention='true'] {
+  position: relative;
+}
+.game-dock button[data-attention='true']::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #f2c47e;
+  inset: 4px 4px auto auto;
+}
+
+@media (max-width: 820px) {
+  .guild-guide[data-in-menu='false'] {
+    bottom: 115px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .guild-game[data-reduced-motion='false'] .case-complete {
+    animation: case-arrival 270ms ease-out both;
+  }
+}
+@keyframes case-arrival {
+  from {
+    opacity: 0.62;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

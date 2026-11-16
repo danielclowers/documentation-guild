@@ -6,7 +6,7 @@
 | 1. Secure invitations and accounts | Invites, Clerk sign-in UI, profile setup, suspension and recovery implemented. D1 and token validation passed locally. The preview admin confirmed hosted sign-in and character creation. |
 | 2. Shared guild hall | Authenticated WebSocket roster, one avatar per member, station walks, waves and accessible roster available in the hosted preview. Expedition departures and returns reuse hall sprites and walking paths. |
 | 3. Standing orders and progression | Connected-only standing orders with saved partial cycles, character XP, three skill tracks and gold. Four gold-funded training upgrades, six specializations, and the Chronicler standing-order perk. Guild Business and expedition perks are active. |
-| 4. Guild Business | Three-slot solo case board, all twelve launch cases, four puzzle types, server-side grading, optional discoveries, and rolling reward limits. |
+| 4. Guild Business | Three-slot solo case board, 26 current templates, seeded puzzle variations, server-side grading and reward previews, and a visible eight-slot rolling allowance. Earlier unfinished puzzles remain resumable. |
 | 5. Cooperative expeditions | Party board, invites, leadership, manual and scheduled departures, single 15-minute extension, server-timed returns, individual events, shared rewards, and Chronicle objectives implemented. |
 | 6. Story, content and polish | Two launch chapters, seven expeditions, five optional modifiers, a personal journal with mystery chains, a shared Chronicle and activity feed, and a return summary are playable. Hall motion and wave controls are available. The hall has no audio assets. |
 | 7. Deployment and operations | GitHub Pages is connected to a Cloudflare preview Worker and D1 database. |
@@ -20,6 +20,12 @@ The GitHub CLI and SSH both verified `danielclowers`. The project repository is 
 The signed-in client uses a full-window pixel-art hall, compact HUD, keyboard-accessible menu dock, and one RPG menu at a time. Workstation signs and desks open their assigned action. Player sprites and the online roster open profiles with the existing wave interaction. A menu keeps the hall and its WebSocket mounted, and the character editor, settings, and admin controls remain available.
 
 Playwright opens the signed-in game with fixture API and WebSocket responses. It checks workspace sizing and integer canvas scaling at 1440×900, 1920×1080 and 2560×1440, along with mobile layout, workstation shortcuts, profile clicks, customization, keyboard focus restoration, and uninterrupted socket use. Worker integration separately verifies real multiplayer and progression.
+
+## Player guidance
+
+Guild Business keeps three cases available. Replacements favor unseen or less recent templates, different skills and challenge families, and at least one quick case. Advanced cases can appear from Level 3. The server uses the same reward calculation for previews and full payouts. Finds have written rarity labels, link to their journal entry, and distinguish new and known results.
+
+The seven-step guild tour is optional and includes shortcuts to the actual hall menus. Skip or finish it to save that decision on the character. Earlier players and returning players can replay it in Settings & Help. Expeditions and standing orders continue using the existing rules while the guide is open.
 
 ## Local verification
 

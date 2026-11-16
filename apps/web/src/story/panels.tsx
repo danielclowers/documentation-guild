@@ -7,7 +7,8 @@ import type {
 } from '@guild/shared';
 import { useEffect, useState } from 'react';
 import { accountError, type AccountApi } from '../accounts/api';
-import { HelpTip } from '../help';
+import { discoveryHelp, HelpTip } from '../help';
+import { Rarity } from '../game/rewards';
 
 const labels = {
   case: 'Guild Business',
@@ -18,17 +19,27 @@ const labels = {
 
 function Discovery({ item }: { item: JournalDiscovery }) {
   return (
-    <li>
+    <li id={'journal-entry-' + item.key} tabIndex={-1}>
       <strong>{item.title}</strong>
       <p>{item.text}</p>
       <small>
-        {labels[item.source]} · {item.rarity}
+        {labels[item.source]} · <Rarity value={item.rarity} />
       </small>
     </li>
   );
 }
 
-export function Journal({ request, visible }: { request: AccountApi; visible: boolean }) {
+export function Journal({
+  request,
+  visible,
+  focusKey,
+  onRead,
+}: {
+  request: AccountApi;
+  visible: boolean;
+  focusKey?: string;
+  onRead: () => void;
+}) {
   const [page, setPage] = useState<'discoveries' | 'chronicle'>('discoveries');
   const [journal, setJournal] = useState<GuildJournal>();
   const [error, setError] = useState('');
@@ -45,6 +56,22 @@ export function Journal({ request, visible }: { request: AccountApi; visible: bo
       });
     return () => controller.abort();
   }, [visible, request]);
+
+  useEffect(() => {
+    if (!visible || !focusKey || !journal) return;
+    if (page !== 'discoveries') {
+      setPage('discoveries');
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      const entry = document.getElementById('journal-entry-' + focusKey);
+      if (!entry) return;
+      entry.scrollIntoView({ block: 'nearest' });
+      entry.focus({ preventScroll: true });
+      onRead();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [visible, focusKey, journal, page, onRead]);
 
   return (
     <div className="story-panel panel-content">
@@ -86,6 +113,12 @@ export function Journal({ request, visible }: { request: AccountApi; visible: bo
               ) : (
                 <p>Your discoveries will be recorded here.</p>
               )}
+              <details className="story-entry">
+                <summary>How discoveries work</summary>
+                {discoveryHelp.map((item) => (
+                  <p key={item}>{item}</p>
+                ))}
+              </details>
               <h3>Mysteries</h3>
               {journal.chains.map((chain) => (
                 <details key={chain.key} className="story-entry">
@@ -109,7 +142,13 @@ export function Journal({ request, visible }: { request: AccountApi; visible: bo
             </section>
           ) : (
             <section className="parchment">
-              <h3>The Unwritten Chronicle</h3>
+              <div className="help-heading">
+                <h3>The Unwritten Chronicle</h3>
+                <HelpTip topic="Chronicle progress">
+                  Everyone shares these chapter goals. Expeditions earn chapter renown and
+                  guaranteed story clues. Random personal discoveries stay in your journal.
+                </HelpTip>
+              </div>
               {journal.chronicle.map((chapter) => (
                 <article key={chapter.key} className="story-entry">
                   <h4>{chapter.title}</h4>

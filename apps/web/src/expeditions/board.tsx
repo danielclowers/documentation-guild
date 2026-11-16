@@ -9,6 +9,7 @@ import type {
 import { useCallback, useEffect, useState } from 'react';
 import { accountError, type AccountApi } from '../accounts/api';
 import { HelpTip } from '../help';
+import { DiscoveryNotice } from '../game/rewards';
 
 const stateLabels = {
   recruiting: 'Recruiting',
@@ -68,6 +69,10 @@ function PartyChoices({
           ))}
         </select>
       </label>
+      <small>
+        Role determines which skill earns XP. Careful improves your check odds, curious trades check
+        odds for better discovery odds, and supportive takes the middle ground.
+      </small>
       {label === 'Create party' && (
         <label>
           Departure
@@ -95,6 +100,7 @@ function PartyCard({
   invitees,
   committed,
   act,
+  onJournal,
 }: {
   party: ExpeditionParty;
   mission: ExpeditionMission;
@@ -103,6 +109,7 @@ function PartyCard({
   busy: boolean;
   invitees: Board['invitees'];
   committed: boolean;
+  onJournal: (key: string) => void;
   act: (input: object) => void;
 }) {
   const [invitee, setInvitee] = useState('');
@@ -149,8 +156,13 @@ function PartyCard({
       {party.state === 'completed' && party.report && (
         <p>
           Party earned {party.report.sharedRenown} guild renown.
-          {party.report.discovery && ' Shared discovery: ' + party.report.discovery + '.'}
+          {!party.report.discoveryEntry &&
+            party.report.discovery &&
+            ' Shared discovery: ' + party.report.discovery + '.'}
         </p>
+      )}
+      {party.report?.discoveryEntry && (
+        <DiscoveryNotice item={party.report.discoveryEntry} onJournal={onJournal} />
       )}
       {recruiting && !joined && !committed && party.roster.length < 4 && (
         <PartyChoices
@@ -267,8 +279,13 @@ function PartyCard({
               {event.result.text}
               {event.result.success && ` +${event.result.xp} XP · +${event.result.gold} gold`}
               {event.result.renown > 0 && ` · +${event.result.renown} guild renown`}
-              {event.result.discovery && ` · Discovered ${event.result.discovery}`}
+              {!event.result.discoveryEntry &&
+                event.result.discovery &&
+                ` · Discovered ${event.result.discovery}`}
             </p>
+          )}
+          {event.result?.discoveryEntry && (
+            <DiscoveryNotice item={event.result.discoveryEntry} onJournal={onJournal} />
           )}
           {event.options.length > 0 ? (
             <>
@@ -314,11 +331,13 @@ export function Expeditions({
   visible,
   profile,
   onChange,
+  onJournal,
 }: {
   request: AccountApi;
   visible: boolean;
   profile: GuildProfile;
   onChange: (profile: GuildProfile) => void;
+  onJournal: (key: string) => void;
 }) {
   const [board, setBoard] = useState<Board>();
   const [key, setKey] = useState('');
@@ -368,7 +387,9 @@ export function Expeditions({
         <h3>Cooperative expeditions</h3>
         <HelpTip topic="expeditions">
           Parties need two to four members. Expeditions keep running after you close the game. Your
-          standing order pauses during the trip and resumes when you are back and connected.
+          standing order pauses during the trip and resumes when you are back and connected. A
+          successful discovery choice starts at 12%. Three optional contributors give the party one
+          15% shared roll.
         </HelpTip>
       </div>
       {error && <p role="alert">{error}</p>}
@@ -462,6 +483,7 @@ export function Expeditions({
               busy={busy}
               committed={committed}
               invitees={board.invitees}
+              onJournal={onJournal}
               act={(body) => void action('/expeditions/' + party.id, body)}
             />
           ))}

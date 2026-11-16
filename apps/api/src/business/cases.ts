@@ -1,6 +1,7 @@
 import { catalog } from '@guild/content';
 import { z } from 'zod';
-import type { BusinessAnswer, BusinessCase, BusinessChoiceKind } from '@guild/shared';
+import { newCaseDefinitions, shuffled } from './new-cases';
+import type { BusinessAnswer, BusinessPuzzle, BusinessChoiceKind } from '@guild/shared';
 
 export const businessAnswerSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('sequence'), tiles: z.array(z.int()).min(4).max(5) }),
@@ -11,21 +12,6 @@ export const businessAnswerSchema = z.discriminatedUnion('type', [
     pairs: z.array(z.tuple([z.int().min(0).max(5), z.int().min(0).max(5)])).length(3),
   }),
 ]);
-
-export const caseRotation = [
-  'pages_in_order',
-  'three_witnesses',
-  'glyph_pairs',
-  'chronicle_priority',
-  'rune_numbers',
-  'ink_stains',
-  'bookmarks',
-  'sealed_chest',
-  'page_five',
-  'first_revision',
-  'repair_or_copy',
-  'scribe_memo',
-];
 
 const definitions = new Map(
   catalog.business_cases.map((definition) => [definition.key, definition]),
@@ -46,31 +32,36 @@ export interface CaseInstance {
   completed_at: number | null;
 }
 
-function shuffled<T>(items: readonly T[], seed: number): T[] {
-  const result = [...items];
-  for (let index = result.length - 1; index > 0; index--) {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    const other = Math.floor((seed / 2 ** 32) * (index + 1));
-    [result[index], result[other]] = [result[other]!, result[index]!];
-  }
-  return result;
-}
-
 export function casePuzzle(row: CaseInstance): {
-  view: BusinessCase;
+  view: BusinessPuzzle;
+  outcome: (option?: number) => string;
   solve: (answer: BusinessAnswer) => boolean;
 } {
   const key = row.template_key;
+  const modern = newCaseDefinitions.get(key);
+  const state = { id: row.id, attempts: row.attempts, retryAt: row.retry_at };
+  if (modern) {
+    const { puzzle, solve, outcome } = modern.build(row.seed);
+    return {
+      view: {
+        ...state,
+        ...puzzle,
+        title: modern.title,
+        skill: modern.skill,
+        difficulty: modern.difficulty,
+      },
+      solve,
+      outcome,
+    };
+  }
   const definition = definitions.get(key);
   if (!definition) throw new Error('Missing Guild Business definition');
   const base = {
-    id: row.id,
+    ...state,
     title: definition.title,
     skill: definition.skill,
     prompt: definition.prompt,
     difficulty: definition.difficulty,
-    attempts: row.attempts,
-    retryAt: row.retry_at,
   };
   if (definition.type === 'sequence') {
     const offset = row.position === 0 ? 0 : row.seed % 20;
@@ -80,6 +71,7 @@ export function casePuzzle(row: CaseInstance): {
     if (tiles.every((value, index) => value === sorted[index])) tiles.reverse();
     return {
       view: { ...base, type: 'sequence', tiles },
+      outcome: () => 'You restored the pages to their proper order.',
       solve: (answer) =>
         answer.type === 'sequence' &&
         answer.tiles.length === sorted.length &&
@@ -90,6 +82,7 @@ export function casePuzzle(row: CaseInstance): {
     const tiles = shuffled(definition.template.initial, row.seed);
     return {
       view: { ...base, type: 'matching', tiles },
+      outcome: () => 'Every pair is accounted for in the guild records.',
       solve: (answer) =>
         answer.type === 'matching' &&
         new Set(answer.pairs.flat()).size === tiles.length &&
@@ -109,6 +102,10 @@ export function casePuzzle(row: CaseInstance): {
   );
   return {
     view: { ...base, type: definition.type, options },
+    outcome: () =>
+      definition.type === 'choice'
+        ? 'Your decision was entered in the guild records.'
+        : 'Your deduction fits the clues.',
     solve: (answer) => {
       const selected =
         (answer.type === 'choice' || answer.type === 'deduction') &&
@@ -125,3 +122,27 @@ export function casePuzzle(row: CaseInstance): {
 export const optionalDiscoveries = catalog.discoveries.filter(
   ({ story_required }) => !story_required,
 );
+
+type CaseMetadata = Pick<BusinessPuzzle, 'skill' | 'difficulty' | 'title'> & {
+  family: string;
+  quick: boolean;
+};
+export const caseMetadata = new Map<string, CaseMetadata>([
+  ...[...definitions].map(
+    ([key, value]) =>
+      [
+        key,
+        {
+          title: value.title,
+          skill: value.skill,
+          family: value.type,
+          difficulty: value.difficulty,
+          quick:
+            value.type === 'choice' || value.type === 'matching' || value.difficulty === 'intro',
+        },
+      ] as const,
+  ),
+  ...[...newCaseDefinitions].map(
+    ([key, value]) => [key, { ...value, quick: Boolean(value.quick) }] as const,
+  ),
+]);

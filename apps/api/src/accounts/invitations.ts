@@ -126,8 +126,8 @@ export async function redeemInvitation(
         .bind(memberId, user.id, input.username, finishedAt, original.id, leaseEndsAt, finishedAt),
       db
         .prepare(
-          `INSERT INTO characters (id, member_id, display_name, hair_style, hair_color, tunic_color)
-        SELECT ?, id, ?, ?, ?, ? FROM members WHERE id = ?`,
+          `INSERT INTO characters (id, member_id, display_name, hair_style, hair_color, tunic_color, tutorial_status)
+        SELECT ?, id, ?, ?, ?, ?, 'pending' FROM members WHERE id = ?`,
         )
         .bind(crypto.randomUUID(), displayName, hairStyle, hairColor, tunicColor, memberId),
       db

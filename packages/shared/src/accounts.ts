@@ -46,6 +46,7 @@ export interface GuildProfile {
         gold: number;
         xp: number;
         level: number;
+        tutorialStatus?: 'pending' | 'done' | null;
         progression: CharacterProgression;
       })
     | null;

@@ -1,4 +1,5 @@
 import type { Skill } from './index';
+import type { DiscoveryFind } from './business';
 import type { ChronicleChapter } from './story';
 
 export const expeditionMinute = 60_000;
@@ -46,6 +47,7 @@ export interface ExpeditionEvent {
     gold: number;
     renown: number;
     discovery?: string;
+    discoveryEntry?: DiscoveryFind;
   };
 }
 export interface ExpeditionParty {
@@ -66,6 +68,7 @@ export interface ExpeditionParty {
     reward?: ExpeditionReward;
     sharedRenown: number;
     discovery: string | null;
+    discoveryEntry?: DiscoveryFind;
   };
 }
 export interface ExpeditionBoard {

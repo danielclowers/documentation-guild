@@ -1,5 +1,7 @@
 # Progression forecast
 
+This forecast used the original 12-case rotation. The player-guidance release preserves payout formulas but changes the case mix and makes advanced cases available from Level 3. Observed normal and advanced case frequency should inform the next forecast.
+
 These estimates start from a fresh character on a Monday. The 7-, 14-, 30- and 60-calendar-day checkpoints contain 5, 10, 22 and 44 workdays. All figures are cumulative. Gold is gross earned before spending. Level 20 starts at 12,863 character XP.
 
 | Player | Day 7 | Day 14 | Day 30 | Day 60 | Reaches Level 20 |

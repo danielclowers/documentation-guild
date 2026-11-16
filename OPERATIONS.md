@@ -44,3 +44,14 @@ Journal & Chronicle shows previously collected personal discoveries, two connect
 While you were away uses the last check-in recorded for this character in the current browser. It shows completed expeditions, open challenges and invitations, discoveries, guild milestones, and standing-order rewards already earned during connected play. A new browser uses a seven-day recap.
 
 From the Expedition Board, a leader can choose one optional modifier for a standard or advanced mission. The board previews its effect before creation. The choice applies to optional challenges and remains fixed for the party. Advanced and tutorial baseline rewards remain the same.
+
+
+## Gameplay guidance
+
+Guild Business offers 26 current templates. The introductory page sort appears on the first board. Later cases use seal-linked fragments, rune and number patterns, witness logic, matching, classification, and resource tradeoffs. The board favors recent variety and raises the chance of advanced content from Level 3. Pending cases from the previous pool keep their original puzzle, attempts, and rewards.
+
+Full-reward previews include training, specialization, the existing retry penalty, and each applicable choice. Each full payout frees its own slot exactly 24 hours later. Reduced cases award 5 character XP and 2 gold, with zero skill XP, renown, or discovery eligibility. Reduced tradeoff cases can be filed as a single routine report because the three bonus routes are unavailable.
+
+Full-reward Business discovery rolls begin at 8% for introductory and standard cases or 12% for advanced cases. A discovery-focused choice adds 12 percentage points. Careful Research adds 2 points per rank to Research cases. The preview also estimates the chance of a new entry based on the player's unknown portion of the optional pool. The roll can select an entry already known, and repeats neither reroll nor add a journal row. Rarity is catalog metadata, with no bonus to stats, rewards, or selection weight. Only guaranteed guild clues advance the Chronicle.
+
+New characters can skip or finish the guild tour and replay it later from Settings & Help. The tour uses the existing actions, and another player is only needed for the expedition itself.

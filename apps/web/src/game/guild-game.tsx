@@ -1,5 +1,5 @@
 import { characterLevel, characterXpForLevel, skillSchema, standingOrders } from '@guild/shared';
-import type { CharacterAppearance, GuildProfile, Skill } from '@guild/shared';
+import type { BusinessReward, CharacterAppearance, GuildProfile, Skill } from '@guild/shared';
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AccountApi } from '../accounts/api';
@@ -15,6 +15,8 @@ import { HallMembers, HallSettings } from '../hall/live-hall';
 import { FAQ } from '../help';
 import { GuildNoticeboard, Journal, useGuildRecap, WhileYouWereAway } from '../story/panels';
 import { GameIcon } from './icons';
+import { GuildGuide, guideSteps } from './guide';
+import { HelpTip } from '../help';
 import { GameMenu, menus } from './menu';
 import type { MenuId } from './menu';
 
@@ -74,7 +76,13 @@ function CharacterSheet({
         </button>
       )}
       <section className="parchment">
-        <h3>Skills</h3>
+        <div className="help-heading">
+          <h3>Skills</h3>
+          <HelpTip topic="skills and experience">
+            Character XP raises your overall level. Skill XP raises one skill. Higher skill levels
+            improve the odds on matching expedition challenges.
+          </HelpTip>
+        </div>
         <ul className="skill-records">
           {skillSchema.options.map((skill) => (
             <li key={skill}>
@@ -86,6 +94,13 @@ function CharacterSheet({
             </li>
           ))}
         </ul>
+        <p>
+          {character.level < 3
+            ? 'Next unlock · Training at level 3.'
+            : character.level < 10
+              ? 'Next unlock · Specializations at level 10.'
+              : 'Training and specializations are available from the dock.'}
+        </p>
       </section>
     </div>
   );
@@ -148,6 +163,31 @@ export function GuildGame({
   );
   const [mute, setMute] = useState(() => getPreference('guild.mute-waves', false));
   const recap = useGuildRecap(request, character.id);
+  const guideKey = 'guild.tour.' + character.id;
+  const [guide, setGuide] = useState<number | null>(() =>
+    character.tutorialStatus === 'pending' && !getPreference(guideKey, false) ? 0 : null,
+  );
+  const [solved, setSolved] = useState(false);
+  const [journalKey, setJournalKey] = useState<string>();
+  const clearJournalFocus = useCallback(() => setJournalKey(undefined), []);
+  const [noticed, setNoticed] = useState<Set<MenuId>>(() => new Set());
+  const [newFind, setNewFind] = useState(false);
+
+  useEffect(() => {
+    if (connected && character.tutorialStatus === 'pending' && getPreference(guideKey, false))
+      void request('/me/tutorial', { method: 'PUT' }).catch(() => undefined);
+  }, [connected, character.tutorialStatus, guideKey, request]);
+
+  const endGuide = () => {
+    setGuide(null);
+    if (character.tutorialStatus !== 'pending') return;
+    try {
+      localStorage.setItem(guideKey, 'true');
+    } catch {
+      /* The account still records completion. */
+    }
+    void request('/me/tutorial', { method: 'PUT' }).catch(() => undefined);
+  };
 
   useEffect(() => {
     onConnection(connected);
@@ -172,6 +212,11 @@ export function GuildGame({
     (id: MenuId) => {
       setVisited((items) => (items.has(id) ? items : new Set(items).add(id)));
       setMenu(id);
+      setNoticed((seen) => (seen.has(id) ? seen : new Set(seen).add(id)));
+      if (id === 'journal') {
+        setNewFind(false);
+        setJournalKey(undefined);
+      }
       if (id !== 'settings') onDismissHelp?.();
     },
     [onDismissHelp],
@@ -191,6 +236,39 @@ export function GuildGame({
       </div>
     ) : null;
 
+  function openJournal(key: string) {
+    open('journal');
+    setJournalKey(key);
+  }
+  function afterCase(reward: BusinessReward) {
+    setSolved(true);
+    if (reward.discovery && !reward.discovery.known) setNewFind(true);
+  }
+  function moveGuide(index: number) {
+    setMenu(null);
+    setGuide(index);
+  }
+  const showAttention = (id: MenuId) => {
+    if (id === 'journal' && newFind) return true;
+    if (!recap || noticed.has(id)) return false;
+    if (id === 'expeditions')
+      return Boolean(recap.invitations || recap.challenges || recap.returned.length);
+    if (id === 'journal') return recap.discoveries > 0;
+    return id === 'activity' && recap.milestones > 0;
+  };
+  const guideCard = (inMenu: boolean) =>
+    guide !== null && (
+      <GuildGuide
+        index={guide}
+        inMenu={inMenu}
+        order={Boolean(character.progression.order)}
+        solved={solved}
+        onMove={moveGuide}
+        onOpen={open}
+        onEnd={endGuide}
+      />
+    );
+
   const own = members.find(({ id }) => id === profile.memberId);
   const order = character.progression.order;
   const onExpedition = character.progression.onExpedition || Boolean(own?.expeditionAt);
@@ -204,6 +282,7 @@ export function GuildGame({
   return (
     <div className="guild-game" data-reduced-motion={reducedMotion}>
       <div className="game-world">
+        {!menu && guideCard(false)}
         <header className="game-hud">
           <div className="hud-character">
             <button
@@ -311,7 +390,17 @@ export function GuildGame({
 
         <nav className="game-dock" aria-label="Guild game menus">
           {primaryMenus.map(([id, label]) => (
-            <button key={id} type="button" aria-label={menus[id].title} onClick={() => open(id)}>
+            <button
+              key={id}
+              type="button"
+              aria-label={menus[id].title}
+              onClick={() => open(id)}
+              data-guide-target={
+                guide !== null && guideSteps[guide]?.menu === id ? 'true' : undefined
+              }
+              data-attention={showAttention(id) ? 'true' : undefined}
+              aria-description={showAttention(id) ? 'Updates available' : undefined}
+            >
               <GameIcon name={menus[id].icon} />
               <span>{label}</span>
             </button>
@@ -326,6 +415,7 @@ export function GuildGame({
       </div>
 
       <GameMenu active={menu} available={available} onOpen={open} onClose={close}>
+        {menu && guideCard(true)}
         {display(
           'orders',
           <StandingOrders
@@ -339,7 +429,13 @@ export function GuildGame({
         )}
         {display(
           'business',
-          <GuildBusiness request={request} onChange={onChange} visible={menu === 'business'} />,
+          <GuildBusiness
+            request={request}
+            onChange={onChange}
+            visible={menu === 'business'}
+            onJournal={openJournal}
+            onComplete={afterCase}
+          />,
         )}
         {display(
           'expeditions',
@@ -348,6 +444,7 @@ export function GuildGame({
             profile={profile}
             onChange={onChange}
             visible={menu === 'expeditions'}
+            onJournal={openJournal}
           />,
         )}
         {display(
@@ -358,7 +455,15 @@ export function GuildGame({
           'training',
           <Training character={character} request={request} onChange={onChange} />,
         )}
-        {display('journal', <Journal request={request} visible={menu === 'journal'} />)}
+        {display(
+          'journal',
+          <Journal
+            request={request}
+            visible={menu === 'journal'}
+            focusKey={journalKey}
+            onRead={clearJournalFocus}
+          />,
+        )}
         {display('activity', <GuildNoticeboard request={request} visible={menu === 'activity'} />)}
         {admin && display('admin', <AdminPanel request={request} visible={menu === 'admin'} />)}
         {display(
@@ -374,6 +479,15 @@ export function GuildGame({
             />
             <section className="panel-content">
               <h3>Help &amp; FAQ</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                  setGuide(0);
+                }}
+              >
+                Replay guild tour
+              </button>
               <FAQ />
             </section>
             <section className="panel-content">

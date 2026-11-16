@@ -1,54 +1,134 @@
 import type { D1Database } from '@cloudflare/workers-types';
-import type { BusinessAnswer, BusinessReward, BusinessSubmission } from '@guild/shared';
-import { casePuzzle, caseRotation, optionalDiscoveries, type CaseInstance } from './cases';
+import { characterLevel } from '@guild/shared';
+import type {
+  BusinessAnswer,
+  BusinessBoard,
+  BusinessReward,
+  BusinessSubmission,
+  Skill,
+} from '@guild/shared';
+import { discoveryFind } from '../story/finds';
+import { casePuzzle, optionalDiscoveries, type CaseInstance } from './cases';
+import {
+  allowance,
+  businessWindow,
+  caseReward,
+  fullPayouts,
+  fullRewardLimit,
+  reducedCasePayout,
+  type RewardModifiers,
+} from './rewards';
+import { nextCase } from './selection';
 
-const DAY = 86_400_000;
-const QUEUE_SIZE = 3;
-const FULL_REWARD_LIMIT = 8;
+const queueSize = 3;
+const modifierColumns =
+  'c.specialization, COALESCE(t.rank, 0) AS scribingRank, COALESCE(r.rank, 0) AS researchRank';
+const modifierJoins = `LEFT JOIN training_purchases t ON t.character_id = c.id AND t.upgrade_key = 'efficient_scribing'
+  LEFT JOIN training_purchases r ON r.character_id = c.id AND r.upgrade_key = 'careful_research'`;
 
-export async function businessBoard(db: D1Database, memberId: string) {
+export async function businessBoard(
+  db: D1Database,
+  memberId: string,
+  now = Date.now(),
+): Promise<BusinessBoard | null> {
   const character = await db
     .prepare(
-      `SELECT c.id FROM characters c JOIN members m ON m.id = c.member_id
+      `SELECT c.id, c.total_xp AS xp, ${modifierColumns}
+    FROM characters c JOIN members m ON m.id = c.member_id ${modifierJoins}
     WHERE m.id = ? AND m.status = 'active'`,
     )
     .bind(memberId)
-    .first<{ id: string }>();
+    .first<RewardModifiers & { id: string; xp: number }>();
   if (!character) return null;
   const pending = db
     .prepare(
       'SELECT * FROM business_cases WHERE character_id = ? AND completed_at IS NULL ORDER BY position LIMIT 3',
     )
     .bind(character.id);
-  const { results } = await pending.all<CaseInstance>();
-  if (results.length === QUEUE_SIZE) return results.map((row) => casePuzzle(row).view);
-  const latest = await db
-    .prepare(
-      'SELECT COALESCE(MAX(position), -1) AS latest FROM business_cases WHERE character_id = ?',
-    )
-    .bind(character.id)
-    .first<number>('latest');
-  // Recount inside the insertion transaction so simultaneous board loads cannot overfill it.
-  await db.batch(
-    Array.from({ length: QUEUE_SIZE }, (_, index) =>
+  let { results } = await pending.all<CaseInstance>();
+  for (let attempt = 0; results.length < queueSize && attempt < 5; attempt++) {
+    const [snapshot, history, latest] = await db.batch([
+      pending,
       db
         .prepare(
-          `INSERT OR IGNORE INTO business_cases (id, character_id, position, template_key, seed)
-     SELECT ?, c.id, ?, ?, ? FROM characters c JOIN members m ON m.id = c.member_id
-     WHERE c.id = ? AND m.status = 'active'
-       AND (SELECT COUNT(*) FROM business_cases WHERE character_id = c.id AND completed_at IS NULL) < ?`,
+          `SELECT template_key FROM business_cases WHERE character_id = ? AND completed_at IS NOT NULL
+        ORDER BY completed_at DESC, position DESC LIMIT 10`,
         )
-        .bind(
-          crypto.randomUUID(),
-          (latest ?? -1) + index + 1,
-          caseRotation[((latest ?? -1) + index + 1) % caseRotation.length],
-          crypto.getRandomValues(new Uint32Array(1))[0]!,
-          character.id,
-          QUEUE_SIZE,
-        ),
+        .bind(character.id),
+      db
+        .prepare(
+          'SELECT COALESCE(MAX(position), -1) AS position FROM business_cases WHERE character_id = ?',
+        )
+        .bind(character.id),
+    ]);
+    results = snapshot!.results as CaseInstance[];
+    const active = results.map(({ template_key }) => template_key);
+    const recent = (history!.results as Pick<CaseInstance, 'template_key'>[]).map(
+      ({ template_key }) => template_key,
+    );
+    const start = (latest!.results[0] as { position: number }).position + 1;
+    if (results.length === queueSize) break;
+    await db.batch(
+      Array.from({ length: queueSize - results.length }, (_, index) => {
+        const position = start + index;
+        const seed = crypto.getRandomValues(new Uint32Array(1))[0]!;
+        const template = nextCase(position, characterLevel(character.xp), active, recent, seed);
+        active.push(template);
+        return db
+          .prepare(
+            `INSERT OR IGNORE INTO business_cases (id, character_id, position, template_key, seed)
+        SELECT ?, c.id, ?, ?, ? FROM characters c JOIN members m ON m.id = c.member_id
+        WHERE c.id = ? AND m.status = 'active'
+        AND (SELECT COALESCE(MAX(position), -1) FROM business_cases WHERE character_id = c.id) = ?
+        AND (SELECT COUNT(*) FROM business_cases WHERE character_id = c.id AND completed_at IS NULL) < ?
+        AND NOT EXISTS (SELECT 1 FROM business_cases WHERE character_id = c.id AND completed_at IS NULL AND template_key = ?)`,
+          )
+          .bind(
+            crypto.randomUUID(),
+            position,
+            template,
+            seed,
+            character.id,
+            position - 1,
+            queueSize,
+            template,
+          );
+      }),
+    );
+    results = (await pending.all<CaseInstance>()).results;
+  }
+  const [window, known] = await Promise.all([
+    allowance(
+      db
+        .prepare(`SELECT COUNT(*) AS used, MIN(awarded_at) AS oldest ${fullPayouts}`)
+        .bind(character.id, now - businessWindow),
     ),
-  );
-  return (await pending.all<CaseInstance>()).results.map((row) => casePuzzle(row).view);
+    db
+      .prepare('SELECT discovery_key FROM personal_discoveries WHERE character_id = ?')
+      .bind(character.id)
+      .all<{ discovery_key: string }>(),
+  ]);
+  const seen = new Set(known.results.map(({ discovery_key }) => discovery_key));
+  const unseen =
+    optionalDiscoveries.filter(({ key }) => !seen.has(key)).length / optionalDiscoveries.length;
+  const full = window.remaining > 0;
+  return {
+    allowance: window,
+    cases: results.map((row) => {
+      const { view } = casePuzzle(row);
+      const preview = caseReward(view, character, full, undefined, unseen);
+      const choicePreviews =
+        view.type === 'choice'
+          ? Object.fromEntries(
+              view.options.map(({ id, effect }) => [
+                id,
+                caseReward(view, character, full, effect, unseen),
+              ]),
+            )
+          : undefined;
+      return { ...view, preview, choicePreviews };
+    }),
+  };
 }
 
 async function resultFor(db: D1Database, row: CaseInstance): Promise<BusinessSubmission> {
@@ -56,21 +136,34 @@ async function resultFor(db: D1Database, row: CaseInstance): Promise<BusinessSub
     return { status: 'retry', attempts: row.attempts, retryAt: row.retry_at };
   const reward = await db
     .prepare(
-      `SELECT r.xp, r.skill_xp AS skillXp, r.gold, b.renown, d.discovery_key AS discoveryKey
+      `SELECT r.xp, r.skill_xp AS skillXp, r.gold, b.renown, r.skill, b.chosen_option AS chosenOption,
+      COALESCE(b.discovery_roll_key, d.discovery_key) AS discoveryKey, d.discovery_key IS NOT NULL AS newDiscovery
     FROM reward_ledger r JOIN business_cases b ON b.id = r.source_id AND b.character_id = r.character_id
     LEFT JOIN personal_discoveries d ON d.character_id = b.character_id AND d.source_id = b.id AND d.source_type = 'business'
     WHERE r.character_id = ? AND r.source_type = 'business' AND r.source_id = ?`,
     )
     .bind(row.character_id, row.id)
-    .first<Omit<BusinessReward, 'discovery'> & { discoveryKey: string | null }>();
+    .first<
+      Pick<BusinessReward, 'xp' | 'skillXp' | 'gold' | 'renown'> & {
+        skill: Skill;
+        chosenOption: number | null;
+        discoveryKey: string | null;
+        newDiscovery: number;
+      }
+    >();
   if (!reward) throw new Error('Completed case missing its reward');
-  const { discoveryKey, ...payout } = reward;
-  const discovery = optionalDiscoveries.find(({ key }) => key === discoveryKey);
+  const { chosenOption, discoveryKey, newDiscovery, ...payout } = reward;
+  const full = payout.skillXp > 0;
   return {
     status: 'completed',
     reward: {
       ...payout,
-      discovery: discovery ? { title: discovery.title, text: discovery.text } : null,
+      full,
+      outcome:
+        !full && casePuzzle(row).view.type === 'choice'
+          ? 'You filed the case as a routine report.'
+          : casePuzzle(row).outcome(chosenOption ?? undefined),
+      discovery: discoveryFind(discoveryKey, !newDiscovery),
     },
   };
 }
@@ -84,16 +177,13 @@ export async function submitBusinessCase(
 ) {
   const find = db
     .prepare(
-      `SELECT b.*, c.specialization, COALESCE(t.rank, 0) AS scribingRank, COALESCE(r.rank, 0) AS researchRank
+      `SELECT b.*, ${modifierColumns}
     FROM business_cases b JOIN characters c ON c.id = b.character_id JOIN members m ON m.id = c.member_id
-    LEFT JOIN training_purchases t ON t.character_id = c.id AND t.upgrade_key = 'efficient_scribing'
-    LEFT JOIN training_purchases r ON r.character_id = c.id AND r.upgrade_key = 'careful_research'
+    ${modifierJoins}
     WHERE b.id = ? AND m.id = ? AND m.status = 'active'`,
     )
     .bind(id, memberId);
-  const row = await find.first<
-    CaseInstance & { specialization: string | null; scribingRank: number; researchRank: number }
-  >();
+  const row = await find.first<CaseInstance & RewardModifiers>();
   if (!row) return null;
   if (row.completed_at !== null || row.retry_at > now) return resultFor(db, row);
 
@@ -113,41 +203,32 @@ export async function submitBusinessCase(
       view.type === 'choice' && answer.type === 'choice'
         ? view.options.find((option) => option.id === answer.option)?.effect
         : undefined;
-    const advanced = view.difficulty === 'advanced';
-    const penalty = row.attempts > 2 ? 0.75 : 1;
-    const bonusPercent =
-      view.skill === 'Scribing'
-        ? (row.specialization === 'Editor' ? 15 : 0) + row.scribingRank * 3
-        : view.skill === 'Restoration' && row.specialization === 'Mender'
-          ? 10
-          : 0;
-    const baseGold = (advanced ? 20 : 12) + (effect === 'guaranteed_gold' ? 4 : 0);
-    const gold = Math.floor((baseGold * penalty * (100 + Math.min(25, bonusPercent))) / 100);
-    const chance =
-      (advanced ? 12 : 8) +
-      (effect === 'discovery_roll' ? 12 : 0) +
-      (view.skill === 'Research' ? row.researchRank * 2 : 0);
+    const payout = caseReward(view, row, true, effect);
+    const selected = view.type === 'choice' && answer.type === 'choice' ? answer.option : null;
     const discovery =
-      row.seed % 100 < chance
+      row.seed % 100 < payout.discoveryChance
         ? optionalDiscoveries[Math.floor(row.seed / 100) % optionalDiscoveries.length]
         : undefined;
     const resolutionId = crypto.randomUUID();
-    const reward =
-      "(SELECT COUNT(*) < ? FROM reward_ledger WHERE character_id = ? AND source_type = 'business' AND skill_xp > 0 AND awarded_at > ?)";
-    const fullReward = [FULL_REWARD_LIMIT, row.character_id, now - DAY] as const;
+    const reward = `(SELECT COUNT(*) < ? ${fullPayouts})`;
+    const params = [fullRewardLimit, row.character_id, now - businessWindow] as const;
     const statements = [
       db
         .prepare(
           `UPDATE business_cases SET completed_at = ?, outcome_key = ?, resolution_id = ?,
-        renown = CASE WHEN ? = 'renown_bonus' AND ${reward} THEN 5 ELSE 0 END
+        chosen_option = ?, renown = CASE WHEN ${reward} THEN ? ELSE 0 END,
+        discovery_roll_key = CASE WHEN ${reward} THEN ? ELSE NULL END
         WHERE id = ? AND completed_at IS NULL AND attempts = ? AND ${activeMember}`,
         )
         .bind(
           now,
           effect ?? null,
           resolutionId,
-          effect ?? null,
-          ...fullReward,
+          selected,
+          ...params,
+          payout.renown,
+          ...params,
+          discovery?.key ?? null,
           id,
           row.attempts,
           memberId,
@@ -155,17 +236,20 @@ export async function submitBusinessCase(
       db
         .prepare(
           `INSERT INTO reward_ledger (character_id, source_type, source_id, skill, xp, skill_xp, gold, awarded_at)
-        SELECT character_id, 'business', id, ?, CASE WHEN full_reward THEN ? ELSE 5 END,
-          CASE WHEN full_reward THEN ? ELSE 0 END, CASE WHEN full_reward THEN ? ELSE 2 END, ?
+        SELECT character_id, 'business', id, ?, CASE WHEN full_reward THEN ? ELSE ? END,
+          CASE WHEN full_reward THEN ? ELSE ? END, CASE WHEN full_reward THEN ? ELSE ? END, ?
         FROM (SELECT character_id, id, ${reward} AS full_reward FROM business_cases WHERE id = ? AND resolution_id = ?)`,
         )
         .bind(
           view.skill,
-          Math.floor((advanced ? 35 : 20) * penalty),
-          Math.floor((advanced ? 16 : 10) * penalty),
-          gold,
+          payout.xp,
+          reducedCasePayout.xp,
+          payout.skillXp,
+          reducedCasePayout.skillXp,
+          payout.gold,
+          reducedCasePayout.gold,
           now,
-          ...fullReward,
+          ...params,
           id,
           resolutionId,
         ),

@@ -27,6 +27,13 @@ export function HelpTip({ topic, children }: { topic: string; children: ReactNod
   );
 }
 
+export const discoveryHelp = [
+  'Guild Business discoveries roll on full rewards. Standard and introductory cases start at 8%, advanced cases at 12%. A discovery choice adds 12 percentage points. Careful Research training adds 2 points per rank on Research cases.',
+  'A successful expedition discovery choice starts at 12%. The Research role and curious strategy each add 5 points. On Research events, Archivist adds 8 points and Missing References adds 5 points. The roll is capped at 30%. When three players resolve optional challenges, the party gets one 15% shared roll.',
+  'Rarity belongs to each entry. Finds are drawn from the optional catalog without weighting by rarity. An already-known entry can come up again and does not reroll or create another journal entry.',
+  'Some discoveries link into mysteries. The Chronicle records guaranteed guild clues from expedition milestones. Finding an optional entry with the same name does not advance that objective. Discoveries tell stories and have no passive stat or reward bonus.',
+] as const;
+
 const questions = [
   [
     'Where do discoveries and expedition reports go?',
@@ -50,7 +57,15 @@ const questions = [
   ],
   [
     'Do Guild Business cases run out?',
-    'The board holds three solo cases and refills as you finish them. It cycles through twelve templates. The first eight payouts in a rolling 24-hour window pay full rewards. Additional cases pay 5 character XP and 2 gold.',
+    'The board holds three solo cases and refills as you finish them. Each of your eight full payouts frees its slot 24 hours later. Extra cases pay 5 character XP and 2 gold, with no skill XP, renown, or discovery roll.',
+  ],
+  [
+    'What do XP and guild renown do?',
+    'Character XP raises your overall level and unlocks training and specializations. Skill XP raises Scribing, Research, or Restoration and helps on matching expedition checks. Guild renown is shared. Expeditions earn chapter renown and advance the Chronicle.',
+  ],
+  [
+    'Can I replay the guild tour?',
+    'Open Settings & Help in the hall and choose Replay guild tour. You can skip any time and keep playing while you explore.',
   ],
   [
     'How do I use gold?',
@@ -71,6 +86,12 @@ export function FAQ() {
           <p>{answer}</p>
         </details>
       ))}
+      <details>
+        <summary>How do discovery rolls work?</summary>
+        {discoveryHelp.map((item) => (
+          <p key={item}>{item}</p>
+        ))}
+      </details>
     </div>
   );
 }

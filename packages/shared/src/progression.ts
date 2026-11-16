@@ -32,7 +32,8 @@ export const trainingUpgrades = {
   },
   careful_research: {
     label: 'Careful Research',
-    description: '+2 percentage points to Research challenge success per rank',
+    description:
+      '+2 percentage points per rank to Research expedition checks and Research Guild Business discovery rolls',
   },
   expedition_readiness: {
     label: 'Expedition Readiness',
@@ -53,7 +54,7 @@ export const specializations = {
   Editor: { skill: 'Scribing', description: '+15% Scribing Guild Business gold' },
   Archivist: {
     skill: 'Research',
-    description: '+8 percentage points to rare Research expedition discoveries, up to 30%',
+    description: '+8 percentage points to Research expedition discovery rolls, up to 30%',
   },
   Investigator: {
     skill: 'Research',

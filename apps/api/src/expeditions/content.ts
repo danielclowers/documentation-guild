@@ -121,3 +121,20 @@ export function challengeChance(
     ),
   );
 }
+
+export function challengeDiscoveryChance(
+  skill: Skill,
+  snapshot: ExpeditionSnapshot,
+  role: Skill,
+  approach: string,
+  modifier?: Modifier,
+) {
+  return Math.min(
+    30,
+    12 +
+      (role === 'Research' ? 5 : 0) +
+      (approach === 'curious' ? 5 : 0) +
+      (modifier?.key === 'missing_references' && skill === 'Research' ? 5 : 0) +
+      (skill === 'Research' && snapshot.specialization === 'Archivist' ? 8 : 0),
+  );
+}

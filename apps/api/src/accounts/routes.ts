@@ -118,7 +118,7 @@ async function getProfile(
   const character = await db
     .prepare(
       `SELECT id, display_name AS displayName, hair_style AS hairStyle,
-    hair_color AS hairColor, tunic_color AS tunicColor, total_xp AS xp, gold FROM characters WHERE member_id = ?`,
+    hair_color AS hairColor, tunic_color AS tunicColor, total_xp AS xp, gold, tutorial_status AS tutorialStatus FROM characters WHERE member_id = ?`,
     )
     .bind(member.id)
     .first<Omit<NonNullable<GuildProfile['character']>, 'level' | 'progression'>>();
@@ -314,6 +314,16 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
     return c.json(await getProfile(c.env.DB, c.var.member, connectedSince));
   });
 
+  members.put('/me/tutorial', async (c) => {
+    await c.env.DB.prepare(
+      `UPDATE characters SET tutorial_status = 'done' WHERE member_id = ? AND tutorial_status IS NOT 'done'
+      AND EXISTS (SELECT 1 FROM members m WHERE m.id = characters.member_id AND m.status = 'active')`,
+    )
+      .bind(c.var.member.id)
+      .run();
+    return c.body(null, 204);
+  });
+
   members.put('/me/standing-order', async (c) => {
     const input = await parseBody(c, z.strictObject({ skill: skillSchema }));
     if (!input) return c.json({ error: { code: 'INVALID_INPUT' } }, 400);
@@ -496,9 +506,9 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
   });
 
   members.get('/business', async (c) => {
-    const cases = await businessBoard(c.env.DB, c.var.member.id);
-    if (!cases) return c.json({ error: { code: 'INVALID_STATE' } }, 409);
-    return c.json({ cases });
+    const board = await businessBoard(c.env.DB, c.var.member.id);
+    if (!board) return c.json({ error: { code: 'INVALID_STATE' } }, 409);
+    return c.json(board);
   });
 
   members.post('/business/:id/submit', async (c) => {
@@ -518,8 +528,8 @@ export function accountRoutes(makeIdentity = clerkIdentity) {
     if (!input) return c.json({ error: { code: 'INVALID_INPUT' } }, 400);
     const { displayName, hairStyle, hairColor, tunicColor } = input;
     await c.env.DB.prepare(
-      `INSERT INTO characters (id, member_id, display_name, hair_style, hair_color, tunic_color)
-      SELECT ?, id, ?, ?, ?, ? FROM members WHERE id = ? AND status = 'active'
+      `INSERT INTO characters (id, member_id, display_name, hair_style, hair_color, tunic_color, tutorial_status)
+      SELECT ?, id, ?, ?, ?, ?, 'pending' FROM members WHERE id = ? AND status = 'active'
       ON CONFLICT (member_id) DO UPDATE SET display_name = excluded.display_name, hair_style = excluded.hair_style,
       hair_color = excluded.hair_color, tunic_color = excluded.tunic_color, version = version + 1`,
     )

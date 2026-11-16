@@ -3,6 +3,7 @@ import { expeditionRewards } from '@guild/shared';
 import type { ExpeditionBoard, ExpeditionParty } from '@guild/shared';
 import {
   type ExpeditionSnapshot,
+  challengeDiscoveryChance,
   discoveries,
   expeditionEvents,
   missions,
@@ -12,6 +13,7 @@ import {
   roll,
 } from './content';
 import { eventEffects } from './events';
+import { discoveryFind } from '../story/finds';
 import type { PartyRow } from './parties';
 import {
   chapterProgressSql,
@@ -41,7 +43,9 @@ export async function expeditionBoard(
     db
       .prepare(
         `WITH visible AS (${visible}) SELECT e.party_id, e.member_id AS id, COALESCE(json_extract(e.snapshot,'$.name'), c.display_name) AS name, e.role, e.approach,
-      e.snapshot, r.xp, r.skill_xp AS skillXp, r.gold
+      e.snapshot, r.xp, r.skill_xp AS skillXp, r.gold,
+      EXISTS (SELECT 1 FROM personal_discoveries d WHERE d.character_id = e.character_id
+        AND d.source_type = 'expedition_shared' AND d.source_id = p.id) AS new_shared
       FROM expedition_members e JOIN characters c ON c.id = e.character_id JOIN expedition_parties p ON p.id = e.party_id
       JOIN visible v ON v.id = p.id JOIN members m ON m.id = e.member_id
       LEFT JOIN reward_ledger r ON r.character_id = e.character_id AND r.source_type = 'expedition' AND r.source_id = p.id
@@ -51,7 +55,7 @@ export async function expeditionBoard(
       .bind(member),
     db
       .prepare(
-        `WITH visible AS (${visible}) SELECT e.party_id, e.slot, e.option_id, e.success, e.renown, e.retried, d.discovery_key, COALESCE(r.xp,0) AS xp, COALESCE(r.gold,0) AS gold
+        `WITH visible AS (${visible}) SELECT e.party_id, e.slot, e.option_id, e.success, e.renown, e.retried, COALESCE(e.discovery_roll_key, d.discovery_key) AS discovery_key, d.discovery_key IS NOT NULL AS new_discovery, COALESCE(r.xp,0) AS xp, COALESCE(r.gold,0) AS gold
       FROM expedition_events e JOIN visible v ON v.id = e.party_id JOIN expedition_members m ON m.party_id = e.party_id AND m.member_id = e.member_id
       LEFT JOIN reward_ledger r ON r.character_id = m.character_id AND r.source_type = 'expedition_event' AND r.source_id = e.party_id || ':' || e.slot
       LEFT JOIN personal_discoveries d ON d.character_id = m.character_id AND d.source_type = 'expedition_event' AND d.source_id = e.party_id || ':' || e.slot
@@ -74,6 +78,7 @@ export async function expeditionBoard(
   type Roster = ExpeditionParty['roster'][number] & {
     party_id: string;
     snapshot: string | null;
+    new_shared: number;
     xp: number | null;
     skillXp: number;
     gold: number;
@@ -88,6 +93,7 @@ export async function expeditionBoard(
     renown: number;
     retried: number;
     discovery_key: string | null;
+    new_discovery: number;
   };
   const inviteRows = invitations!.results as { party_id: string }[];
   const story = chronicle(progress!.results as ChapterProgress[], clues!.results as StoryClue[]);
@@ -121,11 +127,11 @@ export async function expeditionBoard(
                 const outcome = events.find(
                   (item) => item.party_id === p.id && item.slot === event.slot,
                 );
+                const snapshot = JSON.parse(me.snapshot!) as ExpeditionSnapshot;
                 const retry =
                   outcome?.success === 0 &&
                   Boolean(event.deductionClue) &&
-                  (JSON.parse(me.snapshot!) as ExpeditionSnapshot).specialization ===
-                    'Investigator' &&
+                  snapshot.specialization === 'Investigator' &&
                   !events.some((item) => item.party_id === p.id && item.retried);
                 return {
                   slot: event.slot,
@@ -145,9 +151,11 @@ export async function expeditionBoard(
                             id,
                             label,
                             effect:
-                              effect === 'guild_renown' && me.role === 'Scribing'
-                                ? '+6 renown on success with your Scribing role'
-                                : eventEffects[effect],
+                              effect === 'discovery_chance'
+                                ? `${challengeDiscoveryChance(event.skill, snapshot, me.role, me.approach, modifier)}% discovery roll if successful`
+                                : effect === 'guild_renown' && me.role === 'Scribing'
+                                  ? '+6 renown on success with your Scribing role'
+                                  : eventEffects[effect],
                           }))
                       : [],
                   result: outcome
@@ -156,6 +164,8 @@ export async function expeditionBoard(
                         xp: outcome.xp,
                         gold: outcome.gold,
                         renown: outcome.renown,
+                        discoveryEntry:
+                          discoveryFind(outcome.discovery_key, !outcome.new_discovery) ?? undefined,
                         discovery: outcome.discovery_key
                           ? discoveries.get(outcome.discovery_key)?.title
                           : undefined,
@@ -169,6 +179,8 @@ export async function expeditionBoard(
               },
             )
           : [];
+      const shared =
+        p.shared_discovery === 1 ? optionalDiscovery(roll(p.seed, 'shared-item')) : null;
       return {
         id: p.id,
         mission: p.mission,
@@ -196,10 +208,11 @@ export async function expeditionBoard(
                       }
                     : undefined,
                 sharedRenown: p.baseline_renown + p.shared_bonus + p.event_renown,
-                discovery:
-                  p.shared_discovery === 1
-                    ? optionalDiscovery(roll(p.seed, 'shared-item')).title
-                    : null,
+                discovery: shared?.title ?? null,
+                discoveryEntry:
+                  me?.snapshot && shared
+                    ? (discoveryFind(shared.key, !me.new_shared) ?? undefined)
+                    : undefined,
               }
             : p.state === 'running'
               ? {
