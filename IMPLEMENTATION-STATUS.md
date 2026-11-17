@@ -44,4 +44,6 @@ The public GitHub repository uses GitHub Actions to publish the frontend from `m
 
 Standing orders now earn only during a hall connection, per the updated product decision. Existing credited rewards and saved partial cycles carry forward. The Help & FAQ link opens a separate view while keeping the hall connected.
 
-The [progression forecast](docs/PROGRESSION-ANALYSIS.md) models three schedules against the implemented payouts. The expedition update leaves existing XP formulas, the level cap, standing orders, and Guild Business reward rates in place.
+The [progression forecast](docs/PROGRESSION-ANALYSIS.md) models three schedules against the implemented payouts. The November 17, 2026 character curve is `Math.floor(12863 * ((level - 1) / 19) ** 2.1)`, with Level 20 at 12,863 cumulative XP. Existing characters derive their level and feature eligibility from saved XP. The same shared utility serves profiles, hall members, training and expedition requirements, and the HUD.
+
+This revision passed `pnpm check` with 63 tests and all 16 desktop and mobile Chromium checks. Coverage includes every character threshold, unchanged skill thresholds and rewards, saved-data preservation, training and specialization eligibility, both advanced expedition gates, and HUD progress immediately before and at thresholds and beyond the cap.

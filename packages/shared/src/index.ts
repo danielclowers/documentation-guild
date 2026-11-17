@@ -6,7 +6,7 @@ export type Skill = z.infer<typeof skillSchema>;
 const LEVEL_CAP = 20;
 
 export function characterXpForLevel(level: number): number {
-  return Math.floor(70 * (level - 1) ** 1.75 + 40 * (level - 1));
+  return Math.floor(12863 * ((level - 1) / 19) ** 2.1);
 }
 
 export function skillXpForLevel(level: number): number {

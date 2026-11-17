@@ -6,13 +6,13 @@ These are **launch defaults**, not externally sourced facts. Implement in versio
 
 - `character_xp` (overall), `skill_xp` per skill, `gold` (personal, spendable), `guild_renown` (non-spendable shared progress), `discoveries` (unique journal records). No other economy on launch.
 - Level range 1-20; the cap is not a reset. XP continues accumulating at cap for a future extension but grants no additional powers until unlocked by content update.
-- Character XP total required to reach level `L`: `T(L) = floor(70*(L-1)^1.75 + 40*(L-1))`; L=1 requires 0. Skill XP for skill level `S`: `U(S) = floor(45*(S-1)^1.65 + 25*(S-1))`, levels 1-20 at launch.
+- Character XP total required to reach level `L`: `T(L) = floor(12863*((L-1)/19)^2.1)`; L=1 requires 0. Skill XP for skill level `S`: `U(S) = floor(45*(S-1)^1.65 + 25*(S-1))`, levels 1-20 at launch.
 - Recompute levels from cumulative XP, do not store level as an independently mutable authority (cached level permitted with invariant test). No loss of XP on failure, specialization change or missed day.
 - Character gold defaults to 0; training spending cannot put balance below 0; `gold` bounded by safe integer with overflow checks. One character per member and unique reward ledger events.
 
 ## Standing orders
 
-All three options repeat forever until changed; standing orders exist for offline characters, including disconnected players; presence does not influence earning speed. Every 5 **eligible elapsed minutes** pay:
+All three options repeat until changed. Standing orders earn while connected to the hall, including while idle or working in another app. Every 5 **connected minutes** pay:
 
 | Standing order | Character XP | Skill XP (selected) | Gold |
 |---|---:|---:|---:|
@@ -21,8 +21,8 @@ All three options repeat forever until changed; standing orders exist for offlin
 | Restoration | 3 | 5 | 2 |
 
 - Settle based on elapsed eligible time divided into complete 5-minute units; carry fractional elapsed remainder forward, never round up. For switching orders, settle old interval first and assign new order atomically.
-- **Offline earning cap:** maximum 24 hours of eligible standing-order time can accumulate per user between settlement events while disconnected, counting across all offline periods. On online reconnection, settle up to cap; time beyond cap is forfeited without punitive messaging. Online but idle earns normally.
-- If expedition overlaps the accrual window, exclude the overlap: standing order pauses at `started_at`, resumes at `ends_at`; scheduled backend reconciliation can be late without affecting exclusion.
+- Closing the final connected tab pauses standing-order time. Each assignment keeps its unfinished five-minute cycle and resumes when connected again. Multiple tabs share one timer.
+- If expedition overlaps the accrual window, exclude the overlap: standing order pauses at `started_at` and resumes after `ends_at` when connected; scheduled backend reconciliation can be late without affecting exclusion.
 - Stable background behaviors (moving, stretching, coffee break, waving) do not change reward rate.
 - Chronicler: +10% standing-order Scribing gold only; rounding down at batch settlement. All other training/perks capped at a 25% combined standing-order rate increase so idle does not eclipse interactive play.
 
@@ -79,6 +79,12 @@ Allow first rank purchases after level 3. Four upgrades, not a sprawling skill t
 - Guild campaigns are collective; do not charge a player for arriving after campaign completion. Previous chapters readable any time.
 - Repeated party creation/cancellation confers no XP, gold or renown. Emotes grant none. Guild Business can feed minor Chronicle objectives but cannot replace cooperative expedition thresholds.
 
+## Character curve revision
+
+The November 17, 2026 revision applies the new character curve through the shared progression utility. Saved character XP is authoritative, and levels and eligibility are derived from it. At 26 XP a character reaches Level 2, at 113 XP they can train, and at 2,678 XP they can specialize. The maximum remains Level 20 at 12,863 XP.
+
+A passive first workday reaches Level 4 at 266 XP after 7h 25m connected. Reaching the cap requires 357h 20m of connected passive time. The final level takes 1,381 XP, so individual late levels take longer than before. The [full threshold table and revised workday forecast](../PROGRESSION-ANALYSIS.md) use the current case rotation and reward utilities.
+
 ## Estimated pacing and review triggers
 
 A frequent but not obsessed weekday player who keeps the app open and completes ~4 Business cases and 1 expedition should earn roughly 300-500 overall XP/day depending on activity. Level 10 expected after about 1-3 weeks of regular use, level 20 after several weeks. These are targets, **not guarantees**. Run deterministic time simulations with several playstyles, and tune before declaring release-ready:
@@ -87,6 +93,6 @@ A frequent but not obsessed weekday player who keeps the app open and completes 
 - Typical: 2-5 check-ins/day, ~3 Business cases/day, 1 expedition/day if a party is available.
 - Engaged: 5-10 check-ins/day, ~8+ cases, 2 expeditions/day.
 - AFK: leaves game open for 5 days with no clicks; gains standing-order XP/gold but substantially fewer discoveries and guild expedition rewards than actively playing.
-- Absent: no login for 7 days; gains at most 24h capped standing-order credit on return, loses no permanent progress, no expired story access.
+- Absent: no login for 7 days; standing orders retain their partial cycles for resumption. Started expeditions continue and grant their existing rewards.
 
 **Play balance acceptance:** after 30 simulated days, no infinite gold loops or XP overflow; active play is rewarding but not mandatory; missing a week doesn't create an insurmountable difference; low-level member contributes meaningfully to party with high-level members; every party size 2, 3 or 4 can reach worthwhile optional bonuses.

@@ -796,3 +796,109 @@ it('keeps the journal and recap private and pages through guild-safe activity', 
   expect(JSON.stringify(all)).not.toContain('The Library Within');
   expect((await call('/guild/feed?before=invalid', { auth: player })).status).toBe(400);
 });
+
+it('recalculates saved XP in profiles and the hall while preserving player data and historical rewards', async () => {
+  const { read, memberId } = await progressionMember();
+  const character = (await read()).character!.id;
+  const { hallCharacters } = await import('../../apps/api/src/realtime/hall-data');
+  await db.batch([
+    db
+      .prepare(
+        "INSERT INTO reward_ledger VALUES (?, 'business', 'existing-reward', 'Scribing', 20, 10, 12, 1)",
+      )
+      .bind(character),
+    db
+      .prepare(
+        "INSERT INTO training_purchases (character_id, upgrade_key, rank) VALUES (?, 'steady_hands', 2)",
+      )
+      .bind(character),
+    db
+      .prepare(
+        "INSERT INTO personal_discoveries VALUES (?, 'echoing_index', 'business', 'existing-reward', 1)",
+      )
+      .bind(character),
+    db
+      .prepare("UPDATE characters SET gold = 750, specialization = 'Editor' WHERE id = ?")
+      .bind(character),
+  ]);
+  for (const [xp, level] of [
+    [26, 2],
+    [113, 3],
+    [2678, 10],
+    [3633, 11],
+    [12863, 20],
+    [1000000, 20],
+  ]) {
+    await db.prepare('UPDATE characters SET total_xp = ? WHERE id = ?').bind(xp, character).run();
+    const snapshot = () =>
+      db.batch([
+        db.prepare('SELECT * FROM characters WHERE id = ?').bind(character),
+        db.prepare('SELECT * FROM character_skills WHERE character_id = ?').bind(character),
+        db.prepare('SELECT * FROM training_purchases WHERE character_id = ?').bind(character),
+        db.prepare('SELECT * FROM personal_discoveries WHERE character_id = ?').bind(character),
+        db.prepare('SELECT * FROM reward_ledger WHERE character_id = ?').bind(character),
+      ]);
+    const before = await snapshot();
+    expect(await read()).toMatchObject({
+      character: {
+        xp,
+        level,
+        gold: 750,
+        progression: {
+          training: { steady_hands: 2 },
+          specialization: 'Editor',
+          skills: {
+            Scribing: { xp: 10, level: 1 },
+            Research: { xp: 0, level: 1 },
+            Restoration: { xp: 0, level: 1 },
+          },
+        },
+      },
+    });
+    expect(await hallCharacters(db, [memberId])).toMatchObject([{ level }]);
+    expect((await snapshot()).map(({ results }) => results)).toEqual(
+      before.map(({ results }) => results),
+    );
+  }
+});
+
+it('opens training, specializations, and advanced case selection at the new exact thresholds', async () => {
+  const { auth, read } = await progressionMember();
+  const character = (await read()).character!.id;
+  const buy = () =>
+    call('/me/training/efficient_scribing', { auth, method: 'POST', body: { expectedRank: 0 } });
+  const choose = () =>
+    call('/me/specialization', {
+      auth,
+      method: 'POST',
+      body: { specialization: 'Editor', expected: null },
+    });
+  await db
+    .prepare('UPDATE characters SET total_xp = 112, gold = 500 WHERE id = ?')
+    .bind(character)
+    .run();
+  expect((await buy()).status).toBe(409);
+  expect((await read()).character?.level).toBe(2);
+  await db.prepare('UPDATE characters SET total_xp = 113 WHERE id = ?').bind(character).run();
+  expect((await read()).character?.level).toBe(3);
+  expect((await buy()).status).toBe(200);
+  expect((await read()).character?.gold).toBe(400);
+  const { nextCase } = await import('../../apps/api/src/business/selection');
+  const { caseMetadata } = await import('../../apps/api/src/business/cases');
+  const { characterLevel } = await import('../../packages/shared/src');
+  for (const seed of [0, 42, 4294967295]) {
+    expect(caseMetadata.get(nextCase(3, characterLevel(112), [], [], seed))?.difficulty).toBe(
+      'normal',
+    );
+    expect(caseMetadata.get(nextCase(3, characterLevel(113), [], [], seed))?.difficulty).toBe(
+      'advanced',
+    );
+  }
+  await db.prepare('UPDATE characters SET total_xp = 2677 WHERE id = ?').bind(character).run();
+  expect((await choose()).status).toBe(409);
+  await db.prepare('UPDATE characters SET total_xp = 2678 WHERE id = ?').bind(character).run();
+  expect((await choose()).status).toBe(200);
+  expect(await read()).toMatchObject({
+    character: { xp: 2678, level: 10, gold: 400, progression: { specialization: 'Editor' } },
+  });
+});

@@ -775,3 +775,30 @@ it('serves the original expedition report and resolved option for a legacy party
     });
   }
 });
+
+it.each([
+  ['inkwell_catacombs', 487, 5],
+  ['historian_study', 779, 6],
+] as const)(
+  'allows a newly eligible saved character to lead %s at %i XP',
+  async (mission, threshold, level) => {
+    const leader = 'gate_' + mission;
+    const peer = 'peer_' + mission;
+    const db = await expeditionMembers(leader, peer);
+    const party = await createExpedition(leader, null, mission);
+    expect((await expeditionAction(peer, party, 'join', expeditionRole)).status).toBe(200);
+    await db
+      .prepare('UPDATE characters SET total_xp = ? WHERE member_id = ?')
+      .bind(threshold - 1, leader)
+      .run();
+    expect((await expeditionAction(leader, party, 'start')).status).toBe(409);
+    await db
+      .prepare('UPDATE characters SET total_xp = ? WHERE member_id = ?')
+      .bind(threshold, leader)
+      .run();
+    const profile = await request('/me', { id: leader });
+    expect(await profile.json()).toMatchObject({ character: { xp: threshold, level } });
+    expect((await expeditionAction(leader, party, 'start')).status).toBe(200);
+    expect((await boardParty(leader, party))?.state).toBe('running');
+  },
+);

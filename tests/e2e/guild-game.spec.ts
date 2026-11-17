@@ -1,3 +1,4 @@
+import { characterLevel } from '../../packages/shared/src';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { GuildProfile, HallMember } from '../../packages/shared/src';
@@ -106,7 +107,7 @@ async function enter(page: Page, tutorialStatus: 'pending' | null = null, reduce
       tunicColor: ada.tunicColor,
       xp: 630,
       gold: 89,
-      level: 4,
+      level: characterLevel(630),
       tutorialStatus,
       progression: {
         onExpedition: false,
@@ -280,7 +281,7 @@ async function enter(page: Page, tutorialStatus: 'pending' | null = null, reduce
     }
   });
   await visitHall(page);
-  return { calls, live };
+  return { calls, live, profile };
 }
 
 async function visitHall(page: Page) {
@@ -511,4 +512,44 @@ test('keeps the game menus and the hall usable at workstation resolutions', asyn
   await page.getByRole('button', { name: 'While you were away' }).click();
   await page.getByRole('button', { name: 'Open journal' }).click();
   await expect(page.getByRole('dialog', { name: 'Journal & Chronicle' })).toBeVisible();
+});
+
+test('shows accurate character XP progress at thresholds and after reaching the cap', async ({
+  page,
+}) => {
+  const { profile } = await enter(page);
+  for (const [xp, level, next, value, range] of [
+    [0, 1, 26, 0, 26],
+    [25, 1, 26, 25, 26],
+    [26, 2, 113, 0, 87],
+    [112, 2, 113, 86, 87],
+    [113, 3, 266, 0, 153],
+    [630, 5, 779, 143, 292],
+    [2677, 9, 2678, 586, 587],
+    [2678, 10, 3341, 0, 663],
+    [12862, 19, 12863, 1380, 1381],
+    [12863, 20, null, null, null],
+    [1000000, 20, null, null, null],
+  ] as const) {
+    profile.character!.xp = xp;
+    profile.character!.level = level;
+    await visitHall(page);
+    const hud = page.locator('.game-hud');
+    await expect(hud.getByText(`Level ${level}`, { exact: true })).toBeVisible();
+    const bar = hud.getByRole('progressbar');
+    if (next === null) {
+      await expect(bar).toHaveAccessibleName('Maximum level reached');
+      expect(await bar.evaluate((element) => (element as HTMLProgressElement).position)).toBe(1);
+      await expect(
+        hud.getByText(`${xp.toLocaleString()} XP · Max level`, { exact: true }),
+      ).toBeVisible();
+    } else {
+      await expect(bar).toHaveAccessibleName('Experience toward next level');
+      await expect(bar).toHaveAttribute('value', String(value));
+      await expect(bar).toHaveAttribute('max', String(range));
+      await expect(
+        hud.getByText(`${xp.toLocaleString()} XP / ${next.toLocaleString()}`, { exact: true }),
+      ).toBeVisible();
+    }
+  }
 });
