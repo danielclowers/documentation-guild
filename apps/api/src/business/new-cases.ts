@@ -1,3 +1,4 @@
+import { type BusinessCopy, fragmentClue } from '@guild/content';
 import type { BusinessAnswer, BusinessPuzzle, Skill } from '@guild/shared';
 import { businessChoiceKinds } from '@guild/shared';
 
@@ -16,7 +17,7 @@ type Template = {
   difficulty: 'normal' | 'advanced';
   family: 'fragments' | 'patterns' | 'investigation' | 'classification' | 'tradeoffs';
   quick?: boolean;
-  build: (seed: number) => Generated;
+  build: (seed: number, copy?: BusinessCopy) => Generated;
 };
 
 export function shuffled<T>(items: readonly T[], seed: number): T[] {
@@ -60,7 +61,7 @@ function fragments(
     skill,
     family: 'fragments',
     difficulty,
-    build(seed) {
+    build(seed, copy) {
       const symbols = shuffled(signs, seed ^ 73);
       const order = shuffled(
         rows.map((_, index) => index + 1),
@@ -69,15 +70,19 @@ function fragments(
       const labels = Object.fromEntries(
         order.map((id, index) => [
           id,
-          `[${index === 0 ? 'Opening' : symbols[index - 1]}] ${rows[index]} [${index === order.length - 1 ? 'End' : symbols[index]}]`,
+          `[${index === 0 ? 'Opening' : symbols[index - 1]}] ${copy?.rows?.[index] ?? rows[index]} [${index === order.length - 1 ? 'End' : symbols[index]}]`,
         ]),
       );
       const tiles = shuffled(order, seed ^ 83467);
       return {
         puzzle: {
           type: 'sequence',
-          prompt,
-          clues: ['Match the seal at the end of one scrap to the seal at the start of the next.'],
+          prompt: copy?.prompt ?? prompt,
+          clues: [
+            copy
+              ? fragmentClue
+              : 'Match the seal at the end of one scrap to the seal at the start of the next.',
+          ],
           labels,
           tiles: tiles.every((value, index) => value === order[index]) ? tiles.reverse() : tiles,
         },
@@ -85,7 +90,7 @@ function fragments(
           answer.type === 'sequence' &&
           answer.tiles.length === order.length &&
           answer.tiles.every((value, index) => value === order[index]),
-        outcome: () => outcome,
+        outcome: () => copy?.outcome ?? outcome,
       };
     },
   };
@@ -105,17 +110,21 @@ function classify(
     family: 'classification',
     difficulty,
     quick: difficulty === 'normal',
-    build(seed) {
-      const groups = shuffled(sets, seed ^ 6939).slice(0, 3);
+    build(seed, copy) {
+      const groups = shuffled(copy?.pairs ?? sets, seed ^ 6939).slice(0, 3);
       const tiles = shuffled(
         groups.flatMap(([first, second], group) => [
-          { label: first, group },
-          { label: second, group },
+          { label: first!, group },
+          { label: second!, group },
         ]),
         seed ^ 7507,
       );
       return {
-        puzzle: { type: 'matching', prompt, tiles: tiles.map(({ label }) => label) },
+        puzzle: {
+          type: 'matching',
+          prompt: copy?.prompt ?? prompt,
+          tiles: tiles.map(({ label }) => label),
+        },
         solve: (answer) =>
           answer.type === 'matching' &&
           answer.pairs.length === 3 &&
@@ -123,9 +132,28 @@ function classify(
           answer.pairs.every(
             ([a, b]) => tiles[a] !== undefined && tiles[a]?.group === tiles[b]?.group,
           ),
-        outcome: () => outcome,
+        outcome: () => copy?.outcome ?? outcome,
       };
     },
+  };
+}
+
+// Change the story around a deduction without changing its seeded choices or solution.
+function writtenDeduction(
+  seed: number,
+  copy: BusinessCopy | undefined,
+  variables: Record<string, string>,
+) {
+  const fill = (value: string) =>
+    value.replace(/<([a-z]+)>/g, (_, key: string) => {
+      const variable = variables[key];
+      if (variable === undefined) throw new Error(`Unknown case placeholder ${key}`);
+      return variable;
+    });
+  return (prompt: string, clues: string[], choices: string[], outcome: string) => {
+    if (!copy) return deduction(seed, prompt, clues, choices, outcome);
+    const revisedClues = copy.clues?.map(fill) ?? [fill(copy.clue!), ...clues.slice(1)];
+    return deduction(seed, fill(copy.prompt), revisedClues, choices, fill(copy.outcome!));
   };
 }
 
@@ -143,12 +171,12 @@ function investigation(
     skill,
     family: 'investigation',
     difficulty,
-    build(seed) {
+    build(seed, copy) {
       const [a, b, c] = shuffled(investigators, seed ^ 4901) as [string, string, string];
       const [one, two, three] = shuffled(signs, seed ^ 6023) as [string, string, string];
+      const build = writtenDeduction(seed, copy, { a, b, c, one, two, three });
       if (variant === 0)
-        return deduction(
-          seed,
+        return build(
           `${setup} If exactly one account is true, who carried the lantern?`,
           [
             `Choose among ${a}, ${b}, and ${c}. One carried it.`,
@@ -160,8 +188,7 @@ function investigation(
           `${a} carried it. The three statements would otherwise include at least two truths. ${reason}`,
         );
       if (variant === 1)
-        return deduction(
-          seed,
+        return build(
           `${setup} Which seal belongs to ${b}?`,
           [
             `${a}, ${b}, and ${c} each own a different seal: ${one}, ${two}, or ${three}.`,
@@ -172,8 +199,7 @@ function investigation(
           `${b} owns ${two}. The other two seals are accounted for. ${reason}`,
         );
       if (variant === 2)
-        return deduction(
-          seed,
+        return build(
           `${setup} Identify the record whose time cannot be right.`,
           [
             `${a} worked before ${c}.`,
@@ -184,8 +210,7 @@ function investigation(
           `${c} had to work between the verified times, so the last record is inconsistent. ${reason}`,
         );
       if (variant === 3)
-        return deduction(
-          seed,
+        return build(
           `${setup} Who has ${three}?`,
           [
             `${a}, ${b}, and ${c} each carried one different token: ${one}, ${two}, or ${three}.`,
@@ -195,8 +220,7 @@ function investigation(
           [b, a, c],
           `${c} had ${two}, which means ${a} had ${one} and ${b} had ${three}. ${reason}`,
         );
-      return deduction(
-        seed,
+      return build(
         `${setup} Which route meets every condition?`,
         [
           `The ${one} route is dry but closed after dusk.`,
@@ -224,12 +248,12 @@ function pattern(
     family: 'patterns',
     difficulty,
     quick: variant === 0,
-    build(seed) {
+    build(seed, copy) {
       const [a, b, c, d] = shuffled(signs, seed ^ 89) as [string, string, string, string];
       const n = 1 + ((seed >>> 8) % 5);
+      const build = writtenDeduction(seed, copy, { a, b, c, d });
       if (variant === 0)
-        return deduction(
-          seed,
+        return build(
           setup,
           [
             'Each group starts with the same two seals. The third seal can vary.',
@@ -239,8 +263,7 @@ function pattern(
           `${b} belongs in the second position in each group. The pattern is restored.`,
         );
       if (variant === 1)
-        return deduction(
-          seed,
+        return build(
           setup,
           [
             'The two halves mirror each other across the central tile.',
@@ -250,8 +273,7 @@ function pattern(
           `The missing tile mirrors ${b} on the other side of the center.`,
         );
       if (variant === 2)
-        return deduction(
-          seed,
+        return build(
           setup,
           [
             'Count the distance between neighboring numbers. The amount added rises by one each time.',
@@ -261,8 +283,7 @@ function pattern(
           'The gaps rise from two to three to four, so the next gap is five.',
         );
       if (variant === 3)
-        return deduction(
-          seed,
+        return build(
           setup,
           [
             'Each row and each column should contain each of the three seals exactly once.',
@@ -273,8 +294,7 @@ function pattern(
           [a, b, c],
           `Only ${a} completes both the row and the column.`,
         );
-      return deduction(
-        seed,
+      return build(
         setup,
         [
           'Two different ribbons alternate. On each ribbon, the ends match and the middle is different.',
@@ -300,16 +320,21 @@ function tradeoff(
     family: 'tradeoffs',
     difficulty: 'normal',
     quick: true,
-    build(seed) {
+    build(seed, copy) {
       const options = shuffled(
-        paths.map((label, id) => ({ id, label, effect: businessChoiceKinds[id] })),
+        paths.map((label, id) => ({
+          id,
+          label: copy?.options?.[id]?.label ?? label,
+          effect: businessChoiceKinds[id],
+        })),
         seed ^ 139,
       );
       return {
-        puzzle: { type: 'choice', prompt, options },
+        puzzle: { type: 'choice', prompt: copy?.prompt ?? prompt, options },
         solve: (answer) =>
           answer.type === 'choice' && options.some(({ id }) => id === answer.option),
-        outcome: (option) => outcomes[option ?? 0] ?? outcomes[0],
+        outcome: (option) =>
+          copy?.options?.[option ?? 0]?.outcome ?? outcomes[option ?? 0] ?? outcomes[0],
       };
     },
   };

@@ -80,7 +80,7 @@ export function CaseComplete({
           <span aria-hidden="true">✓</span> Case complete!
         </h3>
         <p>{reward.outcome}</p>
-        {!reward.full && <p>Reduced rewards · No skill XP, renown, or discovery roll.</p>}
+        {!reward.full && <p>Reduced rewards: no skill XP, renown or discovery roll.</p>}
         <RewardChips payout={reward} skill={reward.skill} />
       </div>
       {reward.discovery && <DiscoveryNotice item={reward.discovery} onJournal={onJournal} />}

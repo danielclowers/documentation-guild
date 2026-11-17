@@ -28,52 +28,52 @@ export function HelpTip({ topic, children }: { topic: string; children: ReactNod
 }
 
 export const discoveryHelp = [
-  'Guild Business discoveries roll on full rewards. Standard and introductory cases start at 8%, advanced cases at 12%. A discovery choice adds 12 percentage points. Careful Research training adds 2 points per rank on Research cases.',
-  'A successful expedition discovery choice starts at 12%. The Research role and curious strategy each add 5 points. On Research events, Archivist adds 8 points and Missing References adds 5 points. The roll is capped at 30%. When three players resolve optional challenges, the party gets one 15% shared roll.',
-  'Rarity belongs to each entry. Finds are drawn from the optional catalog without weighting by rarity. An already-known entry can come up again and does not reroll or create another journal entry.',
-  'Some discoveries link into mysteries. The Chronicle records guaranteed guild clues from expedition milestones. Finding an optional entry with the same name does not advance that objective. Discoveries tell stories and have no passive stat or reward bonus.',
+  'Full-reward introductory and standard Guild Business cases have an 8% discovery chance. Advanced cases have a 12% chance. Choosing a discovery bonus adds 12 percentage points. Careful Research adds 2 percentage points per rank on Research cases. Reduced-reward cases have no discovery chance.',
+  'A successful expedition choice that offers a discovery starts at 12%. The Research role and the unusual-leads approach each add 5 percentage points. On Research encounters, Archivist adds 8 points and Missing References adds 5 points. The total chance is capped at 30%. If three different participants resolve optional challenges, the party also gets one shared 15% discovery roll.',
+  "Discoveries have rarities, but the optional pool does not give different selection weights to different rarities. You might find an entry you already know. That doesn't create a duplicate journal entry or another roll.",
+  "Some entries are part of longer mysteries. The Chronicle's required clues arrive through expedition milestones and are shared by the guild. A personal discovery, even one with the same title, does not advance a chapter objective. Journal discoveries reveal information and stories, but they do not grant permanent stat bonuses.",
 ] as const;
 
 const questions = [
   [
     'Where do discoveries and expedition reports go?',
-    'Open Journal & Chronicle for personal discoveries, mystery clues and the guild story. The Expedition Board keeps your party reports. Guild activity shows shared discoveries, expedition returns and renown milestones.',
+    'Open Journal & Chronicle for personal discoveries, mysteries and the shared story. The Expedition Board keeps your party reports. Guild Activity shows expedition returns, shared discoveries and renown milestones.',
   ],
   [
     'How do cooperative expeditions work?',
-    'Open the Expedition Board and create or join a party of two to four members. Start as leader or schedule a departure. An underfilled scheduled party has one 15-minute extension. The expedition continues if everyone closes the game. Your standing order pauses during the expedition and resumes when you’re connected again. Optional personal challenges stay open until 24 hours after the expedition ends.',
+    'Create or join a party of two to four members on the Expedition Board. The leader can start the trip or schedule a departure. A scheduled party with fewer than two members has one extra 15-minute recruitment period. Once a trip starts, it finishes even if everyone closes the game. Your standing order pauses during the trip. Optional challenges remain available for 24 hours after it ends.',
   ],
   [
     'How do I earn while idling?',
-    'In your character panel, choose Scribing, Research, or Restoration under Standing order and click Start order. Every five minutes connected to the hall earns character XP, XP for the selected skill, and gold. Leave the game open and your character will keep working while you idle.',
+    "Open Standing Orders and choose Scribing, Research or Restoration. Start your order and leave the game connected. Every five minutes, you earn character XP, XP for that skill and gold. You don't need to interact with the game to earn these rewards.",
   ],
   [
     'What happens when I close the game?',
-    'Closing your last connected tab pauses standing orders. If you leave with three minutes until the next payout, you still have three minutes left when you return. Your earned rewards and unfinished cycle carry over. Extra tabs share the same timer.',
+    "Closing your last connected tab pauses your standing order. If three minutes were left until your next payout, three minutes will still be left when you return. You keep your earned rewards. Multiple tabs share one timer, so opening more than one doesn't increase earnings. An expedition that has already started will continue normally.",
   ],
   [
     'Does changing hall stations change my standing order?',
-    'Hall station moves your avatar. To change your assignment or the skill that earns XP, use Standing order in your character panel. Each assignment keeps its own unfinished cycle.',
+    "No. Moving to a station changes your character's location. To change what earns rewards, open Standing Orders and choose a different assignment. Each assignment keeps its own unfinished cycle.",
   ],
   [
     'Do Guild Business cases run out?',
-    'The board holds three solo cases and refills as you finish them. Each of your eight full payouts frees its slot 24 hours later. Extra cases pay 5 character XP and 2 gold, with no skill XP, renown, or discovery roll.',
+    'No. Three cases are available at a time, and finishing one makes room for another. You can complete eight for full rewards in a rolling 24-hour period. Each full payout restores one slot 24 hours later. Additional cases award 5 character XP and 2 gold, with no skill XP, renown or discovery roll.',
   ],
   [
     'What do XP and guild renown do?',
-    'Character XP raises your overall level and unlocks training and specializations. Skill XP raises Scribing, Research, or Restoration and helps on matching expedition checks. Guild renown is shared. Expeditions earn chapter renown and advance the Chronicle.',
+    "Character XP increases your overall level and unlocks training and specialization. Skill XP increases one of your three skills and helps on matching expedition challenges. Guild renown is shared across all members. Expeditions also earn chapter renown, which counts toward the current Chronicle chapter's goals.",
   ],
   [
     'Can I replay the guild tour?',
-    'Open Settings & Help in the hall and choose Replay guild tour. You can skip any time and keep playing while you explore.',
+    'Yes. Open Settings & Help and choose Replay guild tour. You can skip it at any time and continue playing.',
   ],
   [
     'How do I use gold?',
-    'Training opens at character level 3. Each upgrade has three ranks. Your first specialization is free at level 10. Switching later costs 200 gold and starts a 24-hour cooldown.',
+    'Training opens at level 3. You can buy three ranks of each upgrade. At level 10, you can choose your first specialization for free. Switching later costs 200 gold and starts a 24-hour cooldown.',
   ],
   [
     'How does a coworker join?',
-    'A guild admin creates a one-use invitation under Guild administration. The recipient opens it, creates a username, password and character, then signs in.',
+    'A guild admin creates a one-use invitation under Guild Administration and shares the link with the coworker. The coworker follows the link, creates an account and character, then signs in.',
   ],
 ] as const;
 

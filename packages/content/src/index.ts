@@ -1,6 +1,7 @@
 import { skillSchema } from '@guild/shared';
 import { z } from 'zod';
 import seed from '../../../docs/spec/CONTENT-SEED.json';
+import editorial from '../../../docs/spec/CONTENT-EDITORIAL.json';
 
 const text = z.string().min(1);
 const key = z.string().regex(/^[a-z][a-z0-9_]*$/);
@@ -235,4 +236,96 @@ export function validateCatalog(input: unknown) {
 }
 
 // Keep this catalog server-side. Business templates contain puzzle solutions.
-export const catalog = validateCatalog(seed);
+export const legacyCatalog = validateCatalog(seed);
+export const editorialVersion = 2;
+
+export interface BusinessCopy {
+  title: string;
+  prompt: string;
+  outcome?: string;
+  rows?: string[];
+  clue?: string;
+  clues?: string[];
+  pairs?: string[][];
+  options?: { label: string; outcome: string }[];
+}
+
+export const businessEditorial: Readonly<Record<string, BusinessCopy>> = editorial.business;
+export const fragmentClue = editorial.fragmentClue;
+export const editorialDeductionClues: Readonly<Record<string, string>> = editorial.deductionClues;
+
+const expeditionCopy: Partial<
+  Record<
+    string,
+    Pick<(typeof legacyCatalog.expeditions)[number], 'title' | 'summary' | 'story_beats'>
+  >
+> = editorial.expeditions;
+const eventCopy: Partial<
+  Record<
+    string,
+    {
+      title: string;
+      context: string;
+      options: { label: string; consequence: string }[];
+    }
+  >
+> = editorial.events;
+const approachCopy: Partial<Record<string, { label: string; description: string }>> =
+  editorial.approaches;
+const discoveryCopy: Partial<Record<string, { title: string; text: string }>> =
+  editorial.discoveries;
+const chapterCopy: Partial<
+  Record<string, { intro: string; recap?: string; scenes?: Record<string, string> }>
+> = editorial.chapters;
+const modifierCopy: Partial<Record<string, string>> = editorial.modifiers;
+
+export const catalog = validateCatalog({
+  ...legacyCatalog,
+  business_cases: legacyCatalog.business_cases.map((entry) =>
+    entry.key === 'pages_in_order'
+      ? { ...entry, prompt: businessEditorial[entry.key]!.prompt }
+      : entry,
+  ),
+  expeditions: legacyCatalog.expeditions.map((entry) => ({
+    ...entry,
+    ...expeditionCopy[entry.key],
+    approaches: entry.approaches.map((approach) => ({
+      ...approach,
+      ...approachCopy[approach.key],
+    })),
+  })),
+  events: legacyCatalog.events.map((entry) => {
+    const copy = eventCopy[entry.key];
+    if (!copy || copy.options.length !== entry.options.length)
+      throw new Error(`Invalid editorial options for ${entry.key}`);
+    return {
+      ...entry,
+      title: copy.title,
+      context: copy.context,
+      options: entry.options.map((option, index) => ({ ...option, ...copy.options[index] })),
+    };
+  }),
+  discoveries: legacyCatalog.discoveries.map((entry) => ({
+    ...entry,
+    ...discoveryCopy[entry.key],
+  })),
+  modifiers: legacyCatalog.modifiers.map((entry) => ({
+    ...entry,
+    description: modifierCopy[entry.key] ?? entry.description,
+  })),
+  chapters: legacyCatalog.chapters.map((entry) => {
+    const copy = chapterCopy[entry.key];
+    if (!copy) return entry;
+    return entry.status === 'future_outline'
+      ? { ...entry, intro: copy.intro }
+      : {
+          ...entry,
+          intro: copy.intro,
+          recap: copy.recap ?? entry.recap,
+          scenes: entry.scenes.map((scene) => ({
+            ...scene,
+            text: copy.scenes?.[scene.key] ?? scene.text,
+          })),
+        };
+  }),
+});

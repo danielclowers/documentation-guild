@@ -7,6 +7,7 @@ import {
   discoveries,
   expeditionEvents,
   missions,
+  partyMission,
   modifiers,
   modifierView,
   optionalDiscovery,
@@ -113,7 +114,7 @@ export async function expeditionBoard(
     modifiers: [...modifiers.values()].map(modifierView),
     invitees: invitees!.results as ExpeditionBoard['invitees'],
     parties: (parties!.results as (PartyRow & { event_renown: number })[]).map((p) => {
-      const mission = missions.get(p.mission)!;
+      const mission = partyMission(p.mission, p.content_version)!;
       const modifier = p.modifier ? modifiers.get(p.modifier) : undefined;
       const rows = members.filter((item) => item.party_id === p.id);
       const me = rows.find((item) => item.id === member);
@@ -122,68 +123,75 @@ export async function expeditionBoard(
         p.started_at !== null &&
         p.ends_at !== null &&
         ['running', 'completed'].includes(p.state)
-          ? expeditionEvents(mission, p.seed, member, p.started_at, p.ends_at, p.modifier).map(
-              (event) => {
-                const outcome = events.find(
-                  (item) => item.party_id === p.id && item.slot === event.slot,
-                );
-                const snapshot = JSON.parse(me.snapshot!) as ExpeditionSnapshot;
-                const retry =
-                  outcome?.success === 0 &&
-                  Boolean(event.deductionClue) &&
-                  snapshot.specialization === 'Investigator' &&
-                  !events.some((item) => item.party_id === p.id && item.retried);
-                return {
-                  slot: event.slot,
-                  title: event.title,
-                  context: event.deductionClue
-                    ? event.context + ' ' + event.deductionClue
-                    : event.context,
-                  retry,
-                  skill: event.skill,
-                  availableAt: event.availableAt,
-                  expiresAt: event.expiresAt,
-                  options:
-                    now >= event.availableAt && now < event.expiresAt && (!outcome || retry)
-                      ? event.options
-                          .filter(({ id }) => id !== outcome?.option_id)
-                          .map(({ id, label, effect }) => ({
-                            id,
-                            label,
-                            effect:
-                              effect === 'discovery_chance'
-                                ? `${challengeDiscoveryChance(event.skill, snapshot, me.role, me.approach, modifier)}% discovery roll if successful`
-                                : effect === 'guild_renown' && me.role === 'Scribing'
-                                  ? '+6 renown on success with your Scribing role'
-                                  : eventEffects[effect],
-                          }))
-                      : [],
-                  result: outcome
-                    ? {
-                        success: Boolean(outcome.success),
-                        xp: outcome.xp,
-                        gold: outcome.gold,
-                        renown: outcome.renown,
-                        discoveryEntry:
-                          discoveryFind(outcome.discovery_key, !outcome.new_discovery) ?? undefined,
-                        discovery: outcome.discovery_key
-                          ? discoveries.get(outcome.discovery_key)?.title
-                          : undefined,
-                        text: outcome.success
-                          ? (event.options.find(({ id }) => id === outcome.option_id)
-                              ?.consequence ?? 'You helped the party.')
-                          : 'The attempt fell short. The expedition’s baseline rewards are safe.',
-                      }
-                    : undefined,
-                };
-              },
-            )
+          ? expeditionEvents(
+              mission,
+              p.seed,
+              member,
+              p.started_at,
+              p.ends_at,
+              p.modifier,
+              p.content_version,
+            ).map((event) => {
+              const outcome = events.find(
+                (item) => item.party_id === p.id && item.slot === event.slot,
+              );
+              const snapshot = JSON.parse(me.snapshot!) as ExpeditionSnapshot;
+              const retry =
+                outcome?.success === 0 &&
+                Boolean(event.deductionClue) &&
+                snapshot.specialization === 'Investigator' &&
+                !events.some((item) => item.party_id === p.id && item.retried);
+              return {
+                slot: event.slot,
+                title: event.title,
+                context: event.deductionClue
+                  ? event.context + ' ' + event.deductionClue
+                  : event.context,
+                retry,
+                skill: event.skill,
+                availableAt: event.availableAt,
+                expiresAt: event.expiresAt,
+                options:
+                  now >= event.availableAt && now < event.expiresAt && (!outcome || retry)
+                    ? event.options
+                        .filter(({ id }) => id !== outcome?.option_id)
+                        .map(({ id, label, effect }) => ({
+                          id,
+                          label,
+                          effect:
+                            effect === 'discovery_chance'
+                              ? `${challengeDiscoveryChance(event.skill, snapshot, me.role, me.approach, modifier)}% discovery chance if successful.`
+                              : effect === 'guild_renown' && me.role === 'Scribing'
+                                ? '+6 guild renown if successful with your Scribing role.'
+                                : eventEffects[effect],
+                        }))
+                    : [],
+                result: outcome
+                  ? {
+                      success: Boolean(outcome.success),
+                      xp: outcome.xp,
+                      gold: outcome.gold,
+                      renown: outcome.renown,
+                      discoveryEntry:
+                        discoveryFind(outcome.discovery_key, !outcome.new_discovery) ?? undefined,
+                      discovery: outcome.discovery_key
+                        ? discoveries.get(outcome.discovery_key)?.title
+                        : undefined,
+                      text: outcome.success
+                        ? (event.options.find(({ id }) => id === outcome.option_id)?.consequence ??
+                          'Your contribution helped the party.')
+                        : "That attempt didn't work. Your expedition's baseline rewards are unaffected.",
+                    }
+                  : undefined,
+              };
+            })
           : [];
       const shared =
         p.shared_discovery === 1 ? optionalDiscovery(roll(p.seed, 'shared-item')) : null;
       return {
         id: p.id,
         mission: p.mission,
+        title: mission.title,
         leaderId: p.leader_id,
         modifier: modifier && modifierView(modifier),
         state: p.state,

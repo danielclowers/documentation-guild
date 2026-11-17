@@ -79,8 +79,8 @@ function CharacterSheet({
         <div className="help-heading">
           <h3>Skills</h3>
           <HelpTip topic="skills and experience">
-            Character XP raises your overall level. Skill XP raises one skill. Higher skill levels
-            improve the odds on matching expedition challenges.
+            Character XP increases your overall level. Each skill earns its own XP. Higher skill
+            levels improve your chances on matching expedition challenges.
           </HelpTip>
         </div>
         <ul className="skill-records">

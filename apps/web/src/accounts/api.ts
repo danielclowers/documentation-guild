@@ -32,7 +32,7 @@ export function accountApi(baseUrl: string, getToken?: () => Promise<string | nu
 export type AccountApi = ReturnType<typeof accountApi>;
 
 const messages: Record<string, string> = {
-  INVALID_INPUT: 'Check the highlighted fields and try again.',
+  INVALID_INPUT: 'Check the information you entered and try again.',
   INVITE_INVALID: 'This invitation link is invalid.',
   INVITE_EXPIRED: 'This invitation has expired. Ask a guild admin for a fresh link.',
   INVITE_CONSUMED:
@@ -42,7 +42,7 @@ const messages: Record<string, string> = {
     'This invitation is being processed. If it stays here, wait two minutes and retry with the same username.',
   USERNAME_TAKEN: 'That username is already in use. Choose another.',
   CREDENTIALS_REJECTED:
-    'Clerk rejected these credentials. Try a stronger password or a different username.',
+    "The account details couldn't be accepted. Try a stronger password or a different username.",
   RECOVERY_INVALID: 'This recovery link is invalid, expired, or already used.',
   RECOVERY_FAILED:
     'The password could not be confirmed. Try signing in with the new password or ask the guild admin for a replacement link.',
@@ -54,13 +54,13 @@ const messages: Record<string, string> = {
   SPECIALIZATION_UNAVAILABLE:
     'Check your level, gold, and when you can switch specializations again.',
   EXPEDITION_CONFLICT:
-    'That expedition action is unavailable. Check the roster, departure time, level requirement, or your current party.',
+    "You can't do that right now. Check the party's roster, departure time, level requirement or whether you've already joined another party.",
   INVALID_STATE: 'This record has already changed. Refresh the list and try again.',
 };
 
 export function accountError(error: unknown): string {
   return (
     (error instanceof GuildApiError && messages[error.code]) ||
-    'Guild access is temporarily unavailable. Try again shortly.'
+    'The guild server is temporarily unavailable. Try again in a moment.'
   );
 }

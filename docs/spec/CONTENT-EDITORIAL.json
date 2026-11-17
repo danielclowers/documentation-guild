@@ -1,0 +1,903 @@
+{
+  "business": {
+    "pages_in_order": {
+      "title": "The Apprentice's First Mistake",
+      "prompt": "An apprentice dropped four pages on the way to the bindery. Put them back in numerical order.",
+      "outcome": "The pages are back in order. The apprentice can finish the binding."
+    },
+    "moth_almanac": {
+      "title": "The Moth Almanac",
+      "prompt": "A naturalist's notes on the moths that gather near the old bridge were damaged by rain. Reassemble the observations.",
+      "rows": [
+        "Just after dusk, moths gathered over the river.",
+        "They ignored the lanterns along the road.",
+        "The light they were drawn to came from a patch of pale flowers.",
+        "By morning, tiny eggs covered the undersides of the leaves."
+      ],
+      "outcome": "The naturalist knows which plants to watch next spring."
+    },
+    "bell_log": {
+      "title": "The Bellkeeper's Log",
+      "prompt": "The village bell failed to ring one morning. The bellkeeper sent his account to the guild, but the pages arrived out of order.",
+      "rows": [
+        "At sunrise, I pulled the rope and heard nothing.",
+        "I climbed the tower to see what was wrong.",
+        "A loose branch had wedged itself against the clapper.",
+        "I cleared the branch and rang the bell by hand."
+      ],
+      "outcome": "The log is complete. The bellkeeper has asked for a new shutter to keep branches out of the tower."
+    },
+    "rain_archive": {
+      "title": "The Rain Archive",
+      "prompt": "A surveyor's field journal got soaked during a flood. Put the surviving notes in order.",
+      "rows": [
+        "We reached the lower road at noon.",
+        "Water had risen past the first milestone.",
+        "We turned the horses back toward higher ground.",
+        "From the ridge, we saw the bridge collapse."
+      ],
+      "outcome": "The restored journal identifies where the road became impassable."
+    },
+    "borrowed_sunset": {
+      "title": "The Night the Lighthouse Went Dark",
+      "prompt": "A lighthouse keeper's letter describes a night when a ship disappeared. Recover the five sections in order.",
+      "rows": [
+        "The evening was clear, with three ships in sight.",
+        "At midnight, the lantern went out despite a full reservoir of oil.",
+        "A light appeared far out at sea, where there was no island.",
+        "One of the ships changed course toward it.",
+        "When our lantern came back on, only two ships remained."
+      ],
+      "outcome": "The restored letter gives the guild a reason to investigate the missing ship."
+    },
+    "map_in_margin": {
+      "title": "The Map in the Margin",
+      "prompt": "A torn letter contains directions to a forgotten wellhouse. Reassemble the directions.",
+      "rows": [
+        "Start at the dry well.",
+        "Follow the path marked with a fern.",
+        "Turn when the stone steps begin.",
+        "The third step faces an iron gate."
+      ],
+      "outcome": "The route is readable again. The gate can be found without searching the entire hillside."
+    },
+    "stitched_song": {
+      "title": "The Stitched Song",
+      "prompt": "Five scraps of a song were sewn into the lining of an old coat. Reconstruct the verses.",
+      "rows": [
+        "We left the valley when the apple trees were bare.",
+        "We crossed the mountain before the first snowfall.",
+        "We spent the winter in a town beside the sea.",
+        "In spring we took the river road home.",
+        "The apple trees were flowering when we arrived."
+      ],
+      "outcome": "The complete song describes a journey around the mountains, not over the dangerous winter pass."
+    },
+    "repeat_stamp": {
+      "title": "The Repeat Stamp",
+      "prompt": "A printer is replacing a damaged pattern block. Which seal belongs in the unfinished impression?",
+      "clue": "Each group starts with the same two seals. The third seal can vary.",
+      "outcome": "<b> belongs in the second position in every group. The printer can use the block again."
+    },
+    "mirrored_lantern": {
+      "title": "The Mirrored Lantern",
+      "prompt": "One tile fell from a lantern frame during transport. Identify the missing tile so the maker can repair it.",
+      "clue": "The two halves mirror each other across the central tile.",
+      "outcome": "The missing tile mirrors <b> on the other side of the center."
+    },
+    "stair_marks": {
+      "title": "The Stair Marks",
+      "prompt": "A mason numbered the landings of an unfinished tower using a pattern. What number goes on the next marker?",
+      "clue": "The difference between consecutive numbers grows by one each time.",
+      "outcome": "The gaps increase from two to three to four. The next gap is five."
+    },
+    "nine_seals": {
+      "title": "The Nine Seals",
+      "prompt": "A damaged tile panel is arranged in a three-by-three grid. Replace the missing seal.",
+      "clue": "Each row and each column should contain each of the three seals exactly once.",
+      "outcome": "Only <a> completes both the row and the column."
+    },
+    "braided_ribbons": {
+      "title": "The Braided Ribbons",
+      "prompt": "A weaver needs to replace a missing bead on one of two intertwined ribbons. Find the missing symbol.",
+      "clue": "Every other bead belongs to the same ribbon. Each ribbon has three beads: its first and last match.",
+      "outcome": "The first ribbon reads <a>, <b>, <a>. The second reads <c>, <d>, <c>."
+    },
+    "lantern_accounts": {
+      "title": "Three Conflicting Witnesses",
+      "prompt": "A watch lantern went missing from the gatehouse. Three people were questioned, and exactly one is telling the truth. Who took the lantern?",
+      "clues": [
+        "<a>, <b>, and <c> were the only people who could have taken it.",
+        "<a>: \"<c> took it.\"",
+        "<b>: \"<c> didn't take it.\"",
+        "<c>: \"<a> didn't take it.\""
+      ],
+      "outcome": "<a> took the lantern. Exactly one of the first two statements must be true, so the third must be false. The watch can ask <a> to return it."
+    },
+    "seal_cabinet": {
+      "title": "The Seal Cabinet",
+      "prompt": "Three merchants left their personal seals in a cabinet without labels. Which seal belongs to <b>?",
+      "clues": [
+        "<a>, <b>, and <c> each own a different seal: <one>, <two>, or <three>.",
+        "<c> owns neither <one> nor <two>.",
+        "<a> doesn't own <two>."
+      ],
+      "outcome": "<c> owns <three>, leaving <one> for <a> and <two> for <b>. The seals can be returned."
+    },
+    "night_shift": {
+      "title": "A Shift Out of Order",
+      "prompt": "One entry in a gatehouse watch log has the wrong time. Which watchkeeper's entry needs correcting?",
+      "clues": [
+        "<a> finished their watch before <c>.",
+        "<b> finished their watch after <c>.",
+        "The log places <a> first, <b> second, and <c> last. The times recorded for <a> and <b> have been independently verified."
+      ],
+      "outcome": "<c> must have finished between <a> and <b>. Their recorded time is wrong."
+    },
+    "pocket_token": {
+      "title": "The Pocket Token",
+      "prompt": "Three visitors left their cloaks at an inn. Each had a different claim token. Who has the <three> token?",
+      "clues": [
+        "<a>, <b>, and <c> each have a different token: <one>, <two>, or <three>.",
+        "Exactly one of these statements is true: <a> has <one>; <b> has <two>.",
+        "<c> has neither <one> nor <three>."
+      ],
+      "outcome": "<c> has <two>, so <a> has <one> and <b> has <three>. The innkeeper can return the cloaks."
+    },
+    "flooded_path": {
+      "title": "A Dry Way Home",
+      "prompt": "A courier needs to carry a fragile manuscript home after a flood. Which route is safe?",
+      "clues": [
+        "The <one> route is dry but closes at dusk.",
+        "The <two> route is dry, stays open at night, and has street lamps.",
+        "The <three> route stays open at night but crosses floodwater.",
+        "The courier must travel after dusk, keep the manuscript dry, and has no lantern."
+      ],
+      "outcome": "The <two> route is the only dry, lit route open after dusk. The manuscript arrives safely."
+    },
+    "hearth_kit": {
+      "title": "The Repair Bench",
+      "prompt": "A workshop has four small repair jobs waiting. Match each job with the appropriate tool.",
+      "pairs": [
+        ["Loose bookbinding", "Binder's needle"],
+        ["Rust on a hinge", "Wire brush"],
+        ["Cracked wax seal", "Seal warmer"],
+        ["Water on a page", "Blotting paper"]
+      ],
+      "outcome": "The tools are laid out for the next person on duty."
+    },
+    "night_garden": {
+      "title": "Notes from the Night Garden",
+      "prompt": "Something has been visiting a walled garden at night. Match the traces to the animals that left them.",
+      "pairs": [
+        ["Moth", "Powdery wing scales"],
+        ["Snail", "Dried slime trail"],
+        ["Crow", "Black flight feather"],
+        ["Rabbit", "Paired long hind prints"]
+      ],
+      "outcome": "The gardener knows what has been coming through the wall."
+    },
+    "messages_sorted": {
+      "title": "The Misaddressed Basket",
+      "prompt": "A delivery of handwritten messages arrived without names on the envelopes. Match each message to its intended recipient.",
+      "pairs": [
+        ["Oil for the east lamp", "Lamplighter"],
+        ["The last crossing leaves at dusk", "Ferryman"],
+        ["A string snapped during rehearsal", "Harpist"],
+        ["Please reserve a dry bed for the bulbs", "Gardener"]
+      ],
+      "outcome": "The messages reach the right people before the end of the day."
+    },
+    "residue_test": {
+      "title": "The Residue Test",
+      "prompt": "A restorer has tested four residues from a damaged chest. Match the observations to the materials.",
+      "pairs": [
+        ["Softens with gentle heat", "Wax"],
+        ["Drawn to a magnet", "Iron filings"],
+        ["Dissolves in water and recrystallizes as it dries", "Salt"],
+        ["Leaves a black powder when rubbed", "Charcoal"]
+      ],
+      "outcome": "The restorer can clean each residue without damaging the chest."
+    },
+    "cabinet_labels": {
+      "title": "The Cabinet of Near Things",
+      "prompt": "A collection was left in the hall overnight. Match each object with a suitable place to store it.",
+      "pairs": [
+        ["Pressed flowers", "Dry folder"],
+        ["Living fern", "Moist soil"],
+        ["Brass clasp", "Padded drawer"],
+        ["Loose seeds", "Labeled envelope"]
+      ],
+      "outcome": "The specimens are stored safely, with enough information to identify them later."
+    },
+    "spare_oil": {
+      "title": "One Flask of Lamp Oil",
+      "prompt": "A merchant donated a flask of lamp oil, and three people could make use of it. Who should get it?",
+      "options": [
+        {
+          "label": "Sell it to the ferryman, who is running low.",
+          "outcome": "The ferryman pays a fair price and can finish his last crossing."
+        },
+        {
+          "label": "Use it to examine an old passage beneath the hall.",
+          "outcome": "The extra light makes it possible to inspect the passage properly."
+        },
+        {
+          "label": "Give it to the watch volunteer at the guild entrance.",
+          "outcome": "The evening visitors have a well-lit entrance, and the watch volunteer thanks the guild."
+        }
+      ]
+    },
+    "market_map": {
+      "title": "The Market Map",
+      "prompt": "An old market map is on loan for only an hour. There is time to make one useful copy.",
+      "options": [
+        {
+          "label": "Copy the market stalls for a merchant who has offered payment.",
+          "outcome": "The merchant gets a useful route through the market and pays the guild."
+        },
+        {
+          "label": "Copy the faint markings that appear beneath the newer roads.",
+          "outcome": "There is now a record of the older routes to examine."
+        },
+        {
+          "label": "Copy the entrances and public roads for anyone visiting the market.",
+          "outcome": "Local travelers can consult the copy at the guild hall."
+        }
+      ]
+    },
+    "fog_ribbons": {
+      "title": "Ribbons in the Fog",
+      "prompt": "Colored ribbons have appeared along a riverbank after several unusually foggy mornings. A boatman can spare an hour to help. What should you do?",
+      "options": [
+        {
+          "label": "Help the boatman guide passengers across for a fee.",
+          "outcome": "Everyone reaches the far bank, and the boatman shares the fare."
+        },
+        {
+          "label": "Follow the ribbons upstream to see where they begin.",
+          "outcome": "The search gives the guild a place to investigate when the weather clears."
+        },
+        {
+          "label": "Mark a safe landing for other boatmen.",
+          "outcome": "The local boatmen can use the markers on the next foggy morning."
+        }
+      ]
+    },
+    "one_press": {
+      "title": "The Last Pull of the Press",
+      "prompt": "A printer has offered the guild the last sheet of a print run before closing for repairs. What should it be used for?",
+      "options": [
+        {
+          "label": "Print a notice for an innkeeper who offered to pay.",
+          "outcome": "The innkeeper collects the notice and pays for the work."
+        },
+        {
+          "label": "Take an impression from an old engraving recovered in the hills.",
+          "outcome": "A readable impression is available for examination."
+        },
+        {
+          "label": "Print a notice warning travelers about the washed-out road.",
+          "outcome": "Travelers can avoid the damaged road while the bridge is repaired."
+        }
+      ]
+    }
+  },
+  "fragmentClue": "Match the seal at the end of each fragment to the seal at the start of the next.",
+  "expeditions": {
+    "missing_pages": {
+      "title": "The Missing Pages",
+      "summary": "A village librarian found blank spaces in the Royal Chronicle. The page numbers are intact, but several events appear to have been erased.",
+      "story_beats": {
+        "departure": "The librarian has set aside copies of the Chronicle from several households. None of them is quite the same.",
+        "midpoint": "Your party compares the copies with the village's old records. A procession is mentioned in a baker's account book, but no one remembers it.",
+        "return": "The guild receives a bundle of copied records. There is now evidence that at least one of the missing events actually happened."
+      }
+    },
+    "forgotten_archives": {
+      "title": "The Forgotten Archives",
+      "summary": "An archive beneath an abandoned courthouse was sealed after a fire. The surviving records might contain accounts independent of the Royal Chronicle.",
+      "story_beats": {
+        "departure": "A caretaker unlocks the courthouse cellar and warns the party to watch the rotten stair treads.",
+        "midpoint": "The lower room survived the fire. Several boxes of witness statements have been moved since the archive closed.",
+        "return": "The party brings back descriptions of the surviving records and a record of where each box was found. The courthouse archive offers another way to check the Chronicle."
+      }
+    },
+    "whispering_library": {
+      "title": "The Whispering Library",
+      "summary": "A bookseller reports hearing voices from a locked room long after the customers leave. They seem to be reading parts of the same account.",
+      "story_beats": {
+        "departure": "The bookseller shows the party into the back room and places a chair near the shelves. The voices begin shortly after dusk.",
+        "midpoint": "The voices disagree about the date of a market fire. When someone reads a passage aloud, one of the voices corrects them.",
+        "return": "The guild has a transcription of the voices' accounts. The discrepancies are useful, even if their source remains unexplained."
+      }
+    },
+    "lost_index": {
+      "title": "The Missing Index",
+      "summary": "A retired librarian remembers a room that is missing from the archive's present floor plan. The old catalog lists books that can no longer be found.",
+      "story_beats": {
+        "departure": "The party compares an early floor plan with the walls of the archive and measures the spaces between the rooms.",
+        "midpoint": "A bricked-up doorway is found behind a row of shelves. Its lintel matches the doorway drawn on the older plan.",
+        "return": "The party returns with measurements and a list of the catalog entries associated with the missing room. The guild can now investigate the alteration."
+      }
+    },
+    "lantern_vault": {
+      "title": "The Lantern Vault",
+      "summary": "A mountain shrine stores an old copy of the kingdom's history. Its keeper has forgotten the arrangement of lamps that opens the vault.",
+      "story_beats": {
+        "departure": "The party reaches the shrine and is shown seven lamps set into niches around a stone door.",
+        "midpoint": "Under the old soot are marks indicating which lamps were originally placed together. The party begins testing the arrangement.",
+        "return": "The keeper is able to reopen the vault. The party returns with notes from the surviving records and leaves the original documents in the shrine."
+      }
+    },
+    "inkwell_catacombs": {
+      "title": "The Inkwell Catacombs",
+      "summary": "A disused printing works sits above a network of tunnels. A recent collapse has exposed crates of maps and official notices from an earlier reign.",
+      "story_beats": {
+        "departure": "Local workmen show the party where the ceiling gave way and which sections of the tunnel remain safe.",
+        "midpoint": "The crates contain printing plates that no longer match the notices in circulation. Some have been deliberately scraped smooth.",
+        "return": "The party records the differences and preserves the exposed material. The old plates give the guild a way to compare public records from different periods."
+      }
+    },
+    "historian_study": {
+      "title": "The Historian's Study",
+      "summary": "An estate inventory mentions a historian's private papers. His surviving drafts describe the same events very differently.",
+      "story_beats": {
+        "departure": "The estate's steward lets the party into a study that has been locked for years. Three bundles of papers lie in separate drawers.",
+        "midpoint": "One draft has corrections in its margins. Another omits the corrected passage entirely. The oldest bundle has no corrections at all.",
+        "return": "The guild receives a comparison of the drafts. Someone appears to have removed passages from the written history rather than simply correcting them."
+      }
+    }
+  },
+  "approaches": {
+    "careful": {
+      "label": "Careful investigation",
+      "description": "Take fewer risks and improve the odds of successful optional challenges."
+    },
+    "curious": {
+      "label": "Follow unusual leads",
+      "description": "Optional challenges are harder, but discovery choices have a better chance of finding something."
+    },
+    "supportive": {
+      "label": "Document for the guild",
+      "description": "Focus on a useful record of the expedition and support the party's work."
+    }
+  },
+  "events": {
+    "unending_footnote": {
+      "title": "The Unending Footnote",
+      "context": "A book contains a footnote that directs you to another footnote, which directs you straight back to the first. Someone has been adding to both for years.",
+      "options": [
+        {
+          "label": "Summarize the two notes in one place.",
+          "consequence": "The explanation finally fits on one page."
+        },
+        {
+          "label": "Find the earliest version of the book.",
+          "consequence": "You locate a reference to an edition printed before the two notes existed."
+        },
+        {
+          "label": "Record the problem for the next reader.",
+          "consequence": "You leave a usable reference so nobody else spends the afternoon going in circles."
+        }
+      ]
+    },
+    "sealed_chamber": {
+      "title": "The Trapped Goats",
+      "context": "Two young goats wandered into an abandoned cellar through a hole in the wall. A farmer can hear them bleating, but the steps have collapsed.",
+      "options": [
+        {
+          "label": "Help the farmer lower a basket to bring the goats out.",
+          "consequence": "Both goats arrive safely at the top. One immediately tries to eat the basket."
+        },
+        {
+          "label": "Look for another entrance on the far side of the hill.",
+          "consequence": "You find an old doorway beneath the brambles. It might lead to more than the cellar."
+        },
+        {
+          "label": "Rope off the collapsed steps and mark the safe approach.",
+          "consequence": "The farmer knows where it is safe to stand while the animals are brought out."
+        }
+      ]
+    },
+    "absent_librarian": {
+      "title": "The Absent Librarian",
+      "context": "The librarian has stepped out. Three records on the desk describe the same visitor, but one is a copy of another and one is a later summary.",
+      "options": [
+        {
+          "label": "Read the original handwritten register.",
+          "consequence": "You find an account made at the time of the visit."
+        },
+        {
+          "label": "Examine the copy for additions in the margin.",
+          "consequence": "The copy contains later notes that might lead to another source."
+        },
+        {
+          "label": "Compare all three and label their dates.",
+          "consequence": "The party has a clear record of which sources depend on others."
+        }
+      ]
+    },
+    "singing_ledger": {
+      "title": "The Thursday Fiddler",
+      "context": "A shopkeeper's accounts contain a small payment to a fiddler every Thursday for three years. The shopkeeper insists no musician has ever played there.",
+      "options": [
+        {
+          "label": "Check the entries against the shop's receipts.",
+          "consequence": "The payments are real and come from the same account every week."
+        },
+        {
+          "label": "Ask the nearby musicians about the name.",
+          "consequence": "A musician recalls that the fiddler appeared regularly at another establishment."
+        },
+        {
+          "label": "Make a record of the recurring payment.",
+          "consequence": "The guild can follow the pattern if more accounts turn up."
+        }
+      ]
+    },
+    "wrong_way_map": {
+      "title": "The Wrong-Way Map",
+      "context": "A survey map has been mounted upside down inside its frame. A handwritten arrow disagrees with the nearby compass.",
+      "options": [
+        {
+          "label": "Navigate using the compass.",
+          "consequence": "The party establishes its position without relying on the map's arrow."
+        },
+        {
+          "label": "Compare the frame with an older map.",
+          "consequence": "The frame may have been made for a different survey. You make a note of its unusual dimensions."
+        },
+        {
+          "label": "Mark fixed landmarks on a copy.",
+          "consequence": "The party has a map that can be checked against the actual terrain."
+        }
+      ]
+    },
+    "vanished_stamp": {
+      "title": "The Broken Cart",
+      "context": "A peddler's cart has lost a wheel on a lonely stretch of road. A sack of brass fittings has burst open, and some pieces have rolled into the ditch.",
+      "options": [
+        {
+          "label": "Help unload the cart so the wheel can be put back on.",
+          "consequence": "With the weight off the axle, the peddler can put the wheel back in place."
+        },
+        {
+          "label": "Examine the unusual fittings while collecting them.",
+          "consequence": "One fitting has a maker's mark unlike the others. The peddler says it came from an auction of old palace furnishings."
+        },
+        {
+          "label": "Help gather the scattered fittings before nightfall.",
+          "consequence": "The peddler can finish the journey without leaving part of the order behind."
+        }
+      ]
+    },
+    "mirror_archive": {
+      "title": "The Mirrored Archive",
+      "context": "A glass-fronted cabinet has writing etched on the inside of its glass. The marks are reversed when viewed from outside.",
+      "options": [
+        {
+          "label": "Use a mirror to read the lettering.",
+          "consequence": "The reflection makes the message readable without opening the cabinet."
+        },
+        {
+          "label": "Examine the cabinet for evidence of its maker.",
+          "consequence": "A tiny mark on the hinge matches a style the guild has seen before."
+        },
+        {
+          "label": "Copy the visible lettering for the guild.",
+          "consequence": "The transcription can be read later without handling the glass again."
+        }
+      ]
+    },
+    "ghostly_edit": {
+      "title": "The Gentle Correction",
+      "context": "Every time you look away, another spelling mistake disappears from a manuscript on the desk. No one is close enough to touch it.",
+      "options": [
+        {
+          "label": "Leave the corrected text alone.",
+          "consequence": "By the time you have finished examining the page, three more errors have been corrected."
+        },
+        {
+          "label": "Compare the strange handwriting with nearby books.",
+          "consequence": "You notice a similar hand in a different book and record it for further investigation."
+        },
+        {
+          "label": "Copy both versions without changing the original.",
+          "consequence": "The guild has a record of what the manuscript was doing."
+        }
+      ]
+    },
+    "warm_ink": {
+      "title": "The Warm Inkwell",
+      "context": "An inkwell found in a cold cellar is warm to the touch. Its stopper is slowly working loose.",
+      "options": [
+        {
+          "label": "Set it upright in a shallow stone dish.",
+          "consequence": "The dish contains any leakage while the party examines the bottle."
+        },
+        {
+          "label": "Examine a drop on a spare piece of paper.",
+          "consequence": "The ink dries in a color different from the liquid in the bottle. You record the observation."
+        },
+        {
+          "label": "Draw the bottle and its markings.",
+          "consequence": "The bottle can stay where it was found, and a restorer can examine the drawing later."
+        }
+      ]
+    },
+    "lost_list": {
+      "title": "The Baker's Shortage",
+      "context": "A baker has been paying for twelve sacks of flour each week but receiving eleven. The miller swears the full order leaves his mill.",
+      "options": [
+        {
+          "label": "Check the miller's and baker's delivery receipts.",
+          "consequence": "One of the receipts is counted twice in the baker's weekly total. The miller agrees to correct the bill."
+        },
+        {
+          "label": "Ask the carrier about the other deliveries that day.",
+          "consequence": "The carrier mentions a second bakery with an almost identical name."
+        },
+        {
+          "label": "Draw up a delivery sheet both businesses can use.",
+          "consequence": "The next order can be checked at the mill and again on arrival."
+        }
+      ]
+    },
+    "lunar_pages": {
+      "title": "Pages by Moonlight",
+      "context": "A scrap of parchment appears blank in daylight. Its owner says a line of writing can be seen when a silvered lamp is held close.",
+      "options": [
+        {
+          "label": "Read the scrap under the silvered lamp.",
+          "consequence": "A faint line becomes legible without damaging the parchment."
+        },
+        {
+          "label": "Test whether the lamp reveals marks on other scraps.",
+          "consequence": "A second scrap responds differently to the light. You note the result."
+        },
+        {
+          "label": "Record the lighting arrangement.",
+          "consequence": "The guild can reproduce the test without guessing how it was done."
+        }
+      ]
+    },
+    "false_door": {
+      "title": "The Polite Door",
+      "context": "A door apologizes whenever someone pushes it. A sign above the handle clearly says Pull.",
+      "options": [
+        {
+          "label": "Pull the handle.",
+          "consequence": "The door opens and says, 'Thank you.'"
+        },
+        {
+          "label": "Ask the door who put it there.",
+          "consequence": "The door remembers being installed, but its account of the date is unusual."
+        },
+        {
+          "label": "Add a larger sign for the next visitor.",
+          "consequence": "The next person to arrive has a much better chance of getting in on the first try."
+        }
+      ]
+    },
+    "paper_rain": {
+      "title": "A Roof in the Rain",
+      "context": "A draft through a damaged roof has scattered loose papers around a reading room. Several are stuck to the wet floor.",
+      "options": [
+        {
+          "label": "Close the shutters and remove the wet sheets carefully.",
+          "consequence": "You prevent the room from losing any more loose pages."
+        },
+        {
+          "label": "Examine the wall exposed by the fallen plaster.",
+          "consequence": "Someone scratched a set of tally marks into the original stonework long before the room was painted."
+        },
+        {
+          "label": "Gather the dry papers into labeled bundles.",
+          "consequence": "The owner can put everything back when the room is dry."
+        }
+      ]
+    },
+    "silent_bell": {
+      "title": "The Silent Bell",
+      "context": "A bell in an abandoned watchtower swings in the wind, but makes no sound. The clapper is still in place.",
+      "options": [
+        {
+          "label": "Inspect it from the doorway before touching it.",
+          "consequence": "You establish that the bell's clapper strikes the rim without producing a sound."
+        },
+        {
+          "label": "Test whether nearby objects are also silent.",
+          "consequence": "The silence seems to have a boundary around the bell. You mark where it begins."
+        },
+        {
+          "label": "Record the behavior for the next party.",
+          "consequence": "Other members have a warning about the unusual conditions in the tower."
+        }
+      ]
+    },
+    "midnight_draft": {
+      "title": "The Midnight Draft",
+      "context": "A handwritten record of tomorrow's weather has been left under a stone. A few older sheets appear to contain accurate accounts of previous days.",
+      "options": [
+        {
+          "label": "Check the dated sheets against past weather records.",
+          "consequence": "Several of the older accounts match independent records."
+        },
+        {
+          "label": "Examine the next sheet for details that can be tested.",
+          "consequence": "You identify a prediction that can be checked when the day arrives."
+        },
+        {
+          "label": "Make dated copies before returning to the hall.",
+          "consequence": "The guild can compare the copies with tomorrow's actual weather."
+        }
+      ]
+    },
+    "hidden_stair": {
+      "title": "The Hidden Stair",
+      "context": "A shelf has pulled away from a wall, exposing the edge of a staircase. Dust suggests the entrance has not been used in years.",
+      "options": [
+        {
+          "label": "Check the first steps and the ceiling before entering.",
+          "consequence": "The first landing can be reached safely."
+        },
+        {
+          "label": "Examine the stairwell for evidence of its former use.",
+          "consequence": "Scratches and fittings suggest the stairs once served more than a storage room."
+        },
+        {
+          "label": "Measure the entrance and the accessible landing.",
+          "consequence": "The guild has enough measurements to locate the staircase on a plan."
+        }
+      ]
+    },
+    "stubborn_quill": {
+      "title": "The Stubborn Quill",
+      "context": "A quill writes perfectly well until the writer attempts a particular name. At that point, the ink beads up and slides off the page.",
+      "options": [
+        {
+          "label": "Test the name on another sheet of paper.",
+          "consequence": "The problem follows the quill rather than the sheet."
+        },
+        {
+          "label": "Inspect the ink and the nib for unusual material.",
+          "consequence": "You record an odd discoloration that might help explain the behavior."
+        },
+        {
+          "label": "Copy the name using an ordinary pen.",
+          "consequence": "The guild has a clear record of the exact name the quill would not write."
+        }
+      ]
+    },
+    "broken_hourglass": {
+      "title": "The Backward Hourglass",
+      "context": "An hourglass is running normally on a workbench. When you turn it over, the sand drifts upward through the neck instead of falling.",
+      "options": [
+        {
+          "label": "Set it on a padded surface and observe it without shaking it.",
+          "consequence": "The whole measure of sand travels upward. Not a single grain falls."
+        },
+        {
+          "label": "Test the effect with the glass turned sideways.",
+          "consequence": "The sand still moves toward the same end of the glass. Whatever is happening, it isn't ordinary gravity."
+        },
+        {
+          "label": "Mark which end is affected and write a handling warning.",
+          "consequence": "The next examiner knows which end must remain sealed and that turning the glass won't empty it normally."
+        }
+      ]
+    },
+    "forgotten_key": {
+      "title": "The Forgotten Key",
+      "context": "A key hangs from a hook labeled East Store. The house has no east store, but the outer wall has an old doorway that was filled in.",
+      "options": [
+        {
+          "label": "Examine the filled-in doorway without disturbing it.",
+          "consequence": "The brickwork shows where the original entrance stood."
+        },
+        {
+          "label": "Compare the key with locks in the surrounding rooms.",
+          "consequence": "A matching style of lock suggests the key came from a different part of the building."
+        },
+        {
+          "label": "Record the label and the location of the doorway.",
+          "consequence": "The guild has evidence for the existence of the former room."
+        }
+      ]
+    },
+    "borrowed_memory": {
+      "title": "A Borrowed Memory",
+      "context": "An old account describes a festival in the village square. None of the villagers remember the event, although several houses have decorations bearing its date.",
+      "options": [
+        {
+          "label": "Ask the villagers about the decorations.",
+          "consequence": "A resident remembers helping to make them, but cannot recall why."
+        },
+        {
+          "label": "Search for receipts and public notices from the same date.",
+          "consequence": "You locate references to the festival in independent records."
+        },
+        {
+          "label": "Preserve the written account and the villagers' responses.",
+          "consequence": "The guild has both the earlier record and present-day testimony to compare."
+        }
+      ]
+    },
+    "tower_footnote": {
+      "title": "The Tower in the Margin",
+      "context": "An old route description tells travelers to turn at a tower. No tower appears on the present map, but the distances in the description are unusually precise.",
+      "options": [
+        {
+          "label": "Follow the measured distances along the route.",
+          "consequence": "You find a square foundation concealed by vegetation."
+        },
+        {
+          "label": "Compare the route with earlier surveys.",
+          "consequence": "An older survey contains a feature that might account for the missing tower."
+        },
+        {
+          "label": "Mark the suspected position on the party's map.",
+          "consequence": "The guild has a specific place to examine rather than a vague reference."
+        }
+      ]
+    },
+    "ink_bridge": {
+      "title": "The Ferryman's Bridge",
+      "context": "A small village has lost its footbridge after a storm. The ferryman is carrying people across for free, but his boat cannot take the village's larger animals.",
+      "options": [
+        {
+          "label": "Inspect the remaining bridge supports from the bank.",
+          "consequence": "A builder can repair the crossing without having to start from scratch."
+        },
+        {
+          "label": "Look upstream for evidence of an older crossing.",
+          "consequence": "Several worn stones suggest there was once a ford upstream."
+        },
+        {
+          "label": "Draw a route to the nearest usable crossing for the village.",
+          "consequence": "The villagers have a way to move their animals until the bridge is repaired."
+        }
+      ]
+    },
+    "silver_latch": {
+      "title": "The Silver Latch",
+      "context": "A small silver latch turns only when certain words are spoken nearby. A worn inscription on the panel contains a short sentence.",
+      "options": [
+        {
+          "label": "Read the surviving sentence aloud.",
+          "consequence": "The latch moves without needing to be forced."
+        },
+        {
+          "label": "Examine the edges of the inscription for erased words.",
+          "consequence": "The panel shows signs of an older version of the inscription."
+        },
+        {
+          "label": "Record the words and their order.",
+          "consequence": "The party has an accurate record of how the mechanism responds."
+        }
+      ]
+    },
+    "last_annotation": {
+      "title": "The Last Annotation",
+      "context": "A page contains three dated corrections. The final one is signed with a name that does not appear anywhere else in the document.",
+      "options": [
+        {
+          "label": "Copy the last correction and its signature.",
+          "consequence": "The final amendment is preserved alongside the earlier ones."
+        },
+        {
+          "label": "Compare the signature with letters in the same collection.",
+          "consequence": "There is a possible handwriting match worth pursuing."
+        },
+        {
+          "label": "Record the corrections in their dated order.",
+          "consequence": "The guild can distinguish the original text from each later amendment."
+        }
+      ]
+    }
+  },
+  "deductionClues": {
+    "absent_librarian": "The binding of the handwritten register is dated to the year of the visit. Which record is most likely to be a firsthand account?",
+    "wrong_way_map": "The compass needle moves freely and aligns with the north star. Which guide has been independently checked?",
+    "mirror_archive": "The cabinet is locked and its glass is fragile. Which method lets you read the reversed lettering without opening it?"
+  },
+  "discoveries": {
+    "missing_chapter": {
+      "title": "The Missing Chapter",
+      "text": "An early copy of the Royal Chronicle records a royal procession absent from later editions. The page numbering in the later copies is continuous, even though the account is gone."
+    },
+    "unnamed_historian": {
+      "title": "The Unnamed Historian",
+      "text": "A signature copied from an old record matches the handwriting in several of the recovered notes. The same name is missing from the official list of royal historians."
+    },
+    "prior_draft": {
+      "title": "The Earlier Draft",
+      "text": "The oldest draft describes a tower and the event that took place there. Later versions omit both, without any explanation for the change."
+    },
+    "unending_footnote": {
+      "title": "The Unending Footnote",
+      "text": "Two scholars spent years disputing the wording of a footnote. Neither noticed that they were now citing each other as their original source."
+    },
+    "quiet_quill": {
+      "title": "The Quiet Quill",
+      "text": "A quill refuses to write one particular name. Other pens write it without difficulty, even when dipped in the same ink."
+    },
+    "echoing_index": {
+      "title": "The Echoing Index",
+      "text": "An old library catalog lists a reading room that does not exist on the present floor plan. Several of its shelf numbers are still used elsewhere in the building."
+    },
+    "borrowed_book": {
+      "title": "The Borrowed Book",
+      "text": "A library loan register records a book borrowed ninety years ago. Its return date is a century after the date it was taken out. The borrower's signature appears more than once in the register."
+    },
+    "library_within": {
+      "title": "The Library Within",
+      "text": "A folded floor plan inside a catalog shows two levels below the library. The current building plans show only one."
+    },
+    "ink_that_remembers": {
+      "title": "Ink That Remembers",
+      "text": "An unfinished letter contains two layers of handwriting. When it is warmed, the older writing becomes clear and the newer writing fades."
+    },
+    "kindly_revision": {
+      "title": "The Kindly Revision",
+      "text": "A scholar's corrected manuscript ends with a handwritten note: 'I hope this helps.'"
+    },
+    "tired_seal": {
+      "title": "The Chipped Seal",
+      "text": "Several royal letters from different decades carry the same small chip in the impression of their seal. The records indicate that the seal should have been replaced years earlier."
+    },
+    "map_of_silence": {
+      "title": "The Map of Silence",
+      "text": "A surveyor marked a stretch of forest where footsteps and voices cannot be heard, even at close range. The marks end abruptly at a stream."
+    },
+    "first_margin": {
+      "title": "The First Margin",
+      "text": "One of the historian's earlier sheets has a note in its margin: 'Copy this before it changes.' There are no visible corrections on the rest of the page."
+    },
+    "new_lantern": {
+      "title": "The Seventh Lantern",
+      "text": "Six lamps in a mountain shrine burn ordinary oil. The seventh produces a faint light without a wick. The keeper says it has always done so."
+    },
+    "last_editor": {
+      "title": "The Last Editor",
+      "text": "The final correction in the historian's papers is in a different hand. Beside it is a short instruction: 'Keep the first copy somewhere safe.'"
+    }
+  },
+  "chapters": {
+    "chapter1": {
+      "intro": "Several pages have disappeared from the Royal Chronicle. When the librarian asks people about the missing events, nobody remembers them. The guild begins looking for accounts written independently of the Chronicle.",
+      "recap": "Independent records confirm that the missing events were real. They also point to a historian who had discovered the same problem before the guild began its investigation.",
+      "scenes": {
+        "`arrival`": "The librarian shows the guild two copies of the Chronicle. Both have the same gaps, and in both the page numbers run in order. If someone removed the pages, they also changed the rest of the book.",
+        "`first_fragment`": "An expedition recovers a record of a royal procession from a village account book. The procession is missing from the Chronicle. Several residents remember preparing for it, but none remembers seeing it.",
+        "`second_fragment`": "A second record contains a note from an earlier historian. He had noticed discrepancies between new and old copies of the Chronicle and had begun documenting them.",
+        "`reveal`": "The signature on the note does not match any historian listed in the official records. The guild has a new lead: find out who this person was and whether he left other papers behind."
+      }
+    },
+    "chapter2": {
+      "intro": "The guild has traced the missing historian to a collection of private papers. They include three drafts of the same account, each with different details.",
+      "recap": "The historian's papers show that events were removed or rewritten across successive drafts. His last instruction points the guild toward an earlier copy of the Chronicle.",
+      "scenes": {
+        "`arrival`": "The oldest of the three drafts describes a tower, an event witnessed there, and the people who were present. The later drafts do not agree on any of these details.",
+        "`first_draft`": "The guild compares the oldest draft with a surviving survey of the district. The tower existed where the historian said it did, although nothing more than its foundation remains.",
+        "`second_draft`": "The next draft describes the same day but no longer mentions the tower. It is not simply a shorter account: several of the recorded events have changed.",
+        "`third_draft`": "The last draft has a slip tucked between its pages. The note reads, 'Find the version before the first revision.'",
+        "`reveal`": "The guild now has evidence that the Chronicle was deliberately altered. Finding the original copy may be the only way to establish what was changed and why."
+      }
+    },
+    "chapter3": {
+      "intro": "The guild searches for the original Chronicle and for evidence of why someone altered it. An earlier account suggests that the changes may have been intended to prevent a disaster."
+    },
+    "chapter4": {
+      "intro": "The guild must decide how to preserve the original history without repeating the harm that someone tried to prevent."
+    }
+  },
+  "modifiers": {
+    "unstable_enchantments": "Restoration checks are 5 percentage points harder. Successful Restoration challenges roll twice for optional XP and keep the higher result.",
+    "missing_references": "Research checks gain 5 percentage points. Research discovery choices also gain 5 percentage points to their discovery chance.",
+    "royal_inspection": "Scribing checks gain 5 percentage points. Successful Scribing challenges roll twice for optional gold and keep the higher result.",
+    "ancient_wards": "Restoration checks are 3 percentage points harder. A careful approach cancels this modifier's penalty.",
+    "corrupted_chronicle": "Every member receives a second optional Research challenge, up to the two-challenge limit."
+  }
+}

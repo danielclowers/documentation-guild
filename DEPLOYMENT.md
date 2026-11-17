@@ -20,6 +20,8 @@ Apply `0009_guild_activity.sql` before deploying the journal and modifiers updat
 
 Apply `0010_player_guidance.sql` before the Guild Business and onboarding release. It adds tour status and result metadata to existing rows. New characters start with the tour available automatically. Existing characters can replay the tour from Settings & Help. The migration keeps unfinished cases, reward history, and discoveries. Deploy the Worker before publishing the frontend.
 
+Apply `0011_editorial_versions.sql` before deploying the editorial Worker. The migration adds two columns and leaves saved cases and parties on version 1. The new Worker creates records on version 2 and can read either version. Publish the frontend after checking the Worker.
+
 ## GitHub Pages
 
 The repository is `danielclowers/documentation-guild`. GitHub Actions builds and publishes from `main` with Vite's `/documentation-guild/` base path. Set repository Actions variables `VITE_API_URL` and `VITE_CLERK_PUBLISHABLE_KEY` only when the Worker and corresponding Clerk instance are ready. These are public build inputs. The static build derives its Content Security Policy from the configured API and Clerk frontend origins. Validate the policy in the Clerk staging sign-in test. If attaching a custom Pages domain, update the Vite base path, the Worker `WEB_URL` and origin allowlist, and the Clerk domain settings together. Clerk production requires a domain you control for DNS. [Clerk production deployment](https://clerk.com/docs/guides/development/deployment/production) · [GitHub Pages workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)

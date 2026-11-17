@@ -1,28 +1,20 @@
-import { catalog } from '@guild/content';
+import { catalog, editorialDeductionClues, editorialVersion, legacyCatalog } from '@guild/content';
 import { expeditionDay, skillLevel } from '@guild/shared';
 import type { Skill, Specialization } from '@guild/shared';
 
 export const modifiers = new Map(catalog.modifiers.map((modifier) => [modifier.key, modifier]));
 export type Modifier = (typeof catalog.modifiers)[number];
 
-const modifierEffects: Record<string, string> = {
-  unstable_enchantments:
-    'Restoration checks are 5 percentage points harder. Successful Restoration challenges roll twice for optional XP and keep the higher roll.',
-  missing_references:
-    'Research checks gain 5 percentage points. Research discovery choices gain 5 percentage points to find an item.',
-  royal_inspection:
-    'Scribing checks gain 5 percentage points. Successful Scribing challenges roll twice for optional gold and keep the higher roll.',
-  ancient_wards:
-    'Restoration checks lose 3 percentage points. A careful approach offsets that penalty.',
-  corrupted_chronicle:
-    'Every member receives a second optional Research challenge, up to the usual two-challenge limit.',
-};
-
 export function modifierView(modifier: Modifier) {
-  return { key: modifier.key, title: modifier.title, description: modifierEffects[modifier.key]! };
+  return { key: modifier.key, title: modifier.title, description: modifier.description };
 }
 
 export const missions = new Map(catalog.expeditions.map((mission) => [mission.key, mission]));
+const legacyMissions = new Map(legacyCatalog.expeditions.map((mission) => [mission.key, mission]));
+export function partyMission(key: string, version: number) {
+  return (version === editorialVersion ? missions : legacyMissions).get(key);
+}
+
 export const chapters = catalog.chapters.filter((chapter) => chapter.status === 'launch');
 export const discoveries = new Map(catalog.discoveries.map((item) => [item.key, item]));
 const optional = catalog.discoveries.filter((item) => !item.story_required);
@@ -68,7 +60,8 @@ export function expeditionEvents(
   member: string,
   start: number,
   end: number,
-  modifierKey?: string | null,
+  modifierKey: string | null | undefined,
+  contentVersion: number,
 ) {
   const first = roll(seed, member + ':first') % catalog.events.length;
   const second =
@@ -83,9 +76,12 @@ export function expeditionEvents(
     (modifierKey === 'corrupted_chronicle' || roll(seed, member + ':extra') % 2 === 0)
       ? [first, second]
       : [first];
+  const revised = contentVersion === editorialVersion;
+  const events = revised ? catalog.events : legacyCatalog.events;
+  const clues = revised ? editorialDeductionClues : deductionClues;
   return indexes.map((index, slot) => ({
-    ...catalog.events[index]!,
-    deductionClue: deductionClues[catalog.events[index]!.key],
+    ...events[index]!,
+    deductionClue: clues[events[index]!.key],
     slot,
     availableAt: start + Math.floor((end - start) * (slot === 0 ? 0.4 : 0.7)),
     expiresAt: end + expeditionDay,

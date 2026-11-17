@@ -37,7 +37,9 @@ test('opens the FAQ and returns to the guild', async ({ page }) => {
   await expect(page.getByText('Closing your last connected tab', { exact: false })).toBeVisible();
   await page.getByText('How do cooperative expeditions work?', { exact: true }).click();
   await expect(
-    page.getByText('The expedition continues if everyone closes the game.', { exact: false }),
+    page.getByText('Once a trip starts, it finishes even if everyone closes the game.', {
+      exact: false,
+    }),
   ).toBeVisible();
   await page.getByText('Where do discoveries and expedition reports go?', { exact: true }).click();
   await expect(page.getByText('Open Journal & Chronicle', { exact: false })).toBeVisible();

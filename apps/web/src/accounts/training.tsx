@@ -63,7 +63,7 @@ export function Training({
       <div className="help-heading">
         <h3>Training</h3>
         <HelpTip topic="Training">
-          Spend gold to buy up to three permanent ranks per upgrade. Training stays with you if you
+          Spend gold on permanent training upgrades. Each has three ranks. You keep all ranks if you
           change specialization.
         </HelpTip>
       </div>

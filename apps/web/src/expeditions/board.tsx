@@ -6,7 +6,7 @@ import type {
   GuildProfile,
   Skill,
 } from '@guild/shared';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { accountError, type AccountApi } from '../accounts/api';
 import { HelpTip } from '../help';
 import { DiscoveryNotice } from '../game/rewards';
@@ -40,6 +40,9 @@ function PartyChoices({
   label: 'Create party' | 'Join party';
   busy: boolean;
 }) {
+  const descriptionId = useId();
+  const [approachKey, setApproachKey] = useState(mission.approaches[0]?.key ?? '');
+  const description = mission.approaches.find(({ key }) => key === approachKey)?.description;
   return (
     <form
       className="expedition-form"
@@ -61,7 +64,12 @@ function PartyChoices({
       </label>
       <label>
         Approach
-        <select name="approach">
+        <select
+          name="approach"
+          value={approachKey}
+          aria-describedby={descriptionId}
+          onChange={(event) => setApproachKey(event.currentTarget.value)}
+        >
           {mission.approaches.map((approach) => (
             <option value={approach.key} key={approach.key}>
               {approach.label}
@@ -69,9 +77,15 @@ function PartyChoices({
           ))}
         </select>
       </label>
+      <small id={descriptionId}>{description}</small>
       <small>
-        Role determines which skill earns XP. Careful improves your check odds, curious trades check
-        odds for better discovery odds, and supportive takes the middle ground.
+        Your role determines which skill earns expedition XP. Scribing earns extra renown on
+        successful renown choices, Research improves discovery odds, and Restoration helps with
+        Restoration challenges.
+      </small>
+      <small>
+        Careful investigation improves success odds. Follow unusual leads trades some of that
+        reliability for a higher discovery chance. Document for the guild falls between the two.
       </small>
       {label === 'Create party' && (
         <label>
@@ -120,7 +134,7 @@ function PartyCard({
   const reward = party.report?.reward;
   return (
     <article className="expedition-card">
-      <h4>{mission.title}</h4>
+      <h4>{party.title ?? mission.title}</h4>
       {party.modifier && (
         <p>
           <strong>{party.modifier.title}</strong> · {party.modifier.description}
@@ -315,8 +329,8 @@ function PartyCard({
             !event.result && (
               <p>
                 {Date.now() >= event.expiresAt
-                  ? 'Challenge closed.'
-                  : `Opens ${time(event.availableAt)}`}
+                  ? 'This challenge has closed.'
+                  : `Available from ${time(event.availableAt)}.`}
               </p>
             )
           )}
@@ -386,10 +400,10 @@ export function Expeditions({
       <div className="help-heading">
         <h3>Cooperative expeditions</h3>
         <HelpTip topic="expeditions">
-          Parties need two to four members. Expeditions keep running after you close the game. Your
-          standing order pauses during the trip and resumes when you are back and connected. A
-          successful discovery choice starts at 12%. Three optional contributors give the party one
-          15% shared roll.
+          Parties need two to four members. Expeditions continue if you close the game. Your
+          standing order pauses during the trip and resumes when you're back and connected. Optional
+          challenges can earn extra rewards; discovery chances depend on your role, approach and
+          training.
         </HelpTip>
       </div>
       {error && <p role="alert">{error}</p>}
@@ -420,10 +434,6 @@ export function Expeditions({
           {!committed && selected && (
             <div className="expedition-card">
               <p>{selected.summary}</p>
-              <p>
-                Scribing strengthens renown findings, Research improves discovery odds, and
-                Restoration improves Restoration checks.
-              </p>
               <p>
                 {selected.minutes} minutes ·{' '}
                 {selected.tier === 'advanced'

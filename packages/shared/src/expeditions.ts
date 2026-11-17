@@ -53,6 +53,7 @@ export interface ExpeditionEvent {
 export interface ExpeditionParty {
   id: string;
   mission: string;
+  title?: string;
   leaderId: string;
   modifier?: ExpeditionModifier;
   state: ExpeditionState;

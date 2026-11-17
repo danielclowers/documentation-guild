@@ -1,4 +1,4 @@
-import { catalog } from '@guild/content';
+import { businessEditorial, catalog, editorialVersion, legacyCatalog } from '@guild/content';
 import { z } from 'zod';
 import { newCaseDefinitions, shuffled } from './new-cases';
 import type { BusinessAnswer, BusinessPuzzle, BusinessChoiceKind } from '@guild/shared';
@@ -14,7 +14,7 @@ export const businessAnswerSchema = z.discriminatedUnion('type', [
 ]);
 
 const definitions = new Map(
-  catalog.business_cases.map((definition) => [definition.key, definition]),
+  legacyCatalog.business_cases.map((definition) => [definition.key, definition]),
 );
 const choices: Record<string, readonly BusinessChoiceKind[]> = {
   repair_or_copy: ['guaranteed_gold', 'renown_bonus', 'discovery_roll'],
@@ -30,6 +30,7 @@ export interface CaseInstance {
   attempts: number;
   retry_at: number;
   completed_at: number | null;
+  content_version: number;
 }
 
 export function casePuzzle(row: CaseInstance): {
@@ -39,14 +40,15 @@ export function casePuzzle(row: CaseInstance): {
 } {
   const key = row.template_key;
   const modern = newCaseDefinitions.get(key);
+  const copy = row.content_version === editorialVersion ? businessEditorial[key] : undefined;
   const state = { id: row.id, attempts: row.attempts, retryAt: row.retry_at };
   if (modern) {
-    const { puzzle, solve, outcome } = modern.build(row.seed);
+    const { puzzle, solve, outcome } = modern.build(row.seed, copy);
     return {
       view: {
         ...state,
         ...puzzle,
-        title: modern.title,
+        title: copy?.title ?? modern.title,
         skill: modern.skill,
         difficulty: modern.difficulty,
       },
@@ -60,7 +62,7 @@ export function casePuzzle(row: CaseInstance): {
     ...state,
     title: definition.title,
     skill: definition.skill,
-    prompt: definition.prompt,
+    prompt: copy?.prompt ?? definition.prompt,
     difficulty: definition.difficulty,
   };
   if (definition.type === 'sequence') {
@@ -71,7 +73,7 @@ export function casePuzzle(row: CaseInstance): {
     if (tiles.every((value, index) => value === sorted[index])) tiles.reverse();
     return {
       view: { ...base, type: 'sequence', tiles },
-      outcome: () => 'You restored the pages to their proper order.',
+      outcome: () => copy?.outcome ?? 'You restored the pages to their proper order.',
       solve: (answer) =>
         answer.type === 'sequence' &&
         answer.tiles.length === sorted.length &&

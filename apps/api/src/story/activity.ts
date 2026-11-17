@@ -2,7 +2,7 @@ import type { D1Database } from '@cloudflare/workers-types';
 import { expeditionDay } from '@guild/shared';
 import type { GuildActivity, GuildFeed } from '@guild/shared';
 import { z } from 'zod';
-import { discoveries, missions, optionalDiscovery, roll } from '../expeditions/content';
+import { discoveries, partyMission, optionalDiscovery, roll } from '../expeditions/content';
 
 const retention = 30 * expeditionDay;
 const pageSize = 20;
@@ -19,7 +19,14 @@ export function readFeedCursor(value: string | undefined) {
   }
 }
 
-type FeedRow = { id: string; kind: GuildActivity['kind']; at: number; key: string; amount: number };
+type FeedRow = {
+  id: string;
+  kind: GuildActivity['kind'];
+  at: number;
+  key: string;
+  amount: number;
+  content_version: number;
+};
 
 export async function guildFeed(
   db: D1Database,
@@ -32,18 +39,18 @@ export async function guildFeed(
       .prepare(
         `WITH activity AS (
       SELECT 'expedition:' || p.id AS id, 'expedition' AS kind, p.ends_at AS at, p.mission AS key,
-        p.baseline_renown AS amount FROM expedition_parties p WHERE p.state = 'completed' AND p.ends_at >= ?1
+        p.baseline_renown AS amount, p.content_version FROM expedition_parties p WHERE p.state = 'completed' AND p.ends_at >= ?1
       UNION ALL
-      SELECT 'clue:' || c.clue, 'clue', p.ends_at, c.clue, 0
+      SELECT 'clue:' || c.clue, 'clue', p.ends_at, c.clue, 0, 1
         FROM expedition_chronicle c JOIN expedition_parties p ON p.id = c.party_id WHERE p.ends_at >= ?1
       UNION ALL
       SELECT 'discovery:' || p.id, 'discovery', COALESCE(p.shared_discovered_at, (
         SELECT MIN(d.discovered_at) FROM expedition_members e JOIN personal_discoveries d ON d.character_id = e.character_id
         WHERE e.party_id = p.id AND d.source_type = 'expedition_shared' AND d.source_id = p.id
-      ), p.ends_at), '', p.seed
+      ), p.ends_at), '', p.seed, 1
       FROM expedition_parties p WHERE p.state = 'completed' AND p.shared_discovery = 1 AND p.ends_at >= ?1 - ?2
       UNION ALL
-      SELECT 'renown:' || renown, 'renown', reached_at, '', renown
+      SELECT 'renown:' || renown, 'renown', reached_at, '', renown, 1
         FROM guild_renown_milestones WHERE reached_at >= ?1
     ) SELECT * FROM activity WHERE at >= ?1 AND (at < ?3 OR (at = ?3 AND id < ?4))
       ORDER BY at DESC, id DESC LIMIT ?5`,
@@ -52,18 +59,20 @@ export async function guildFeed(
     db.prepare("SELECT renown FROM guilds WHERE id = 'documentation-guild'"),
   ]);
   const rows = feed!.results as FeedRow[];
-  const entries = rows.slice(0, pageSize).map(({ id, kind, at, key, amount }): GuildActivity => {
-    switch (kind) {
-      case 'expedition':
-        return { id, kind, at, title: missions.get(key)!.title, renown: amount };
-      case 'clue':
-        return { id, kind, at, title: discoveries.get(key)!.title };
-      case 'discovery':
-        return { id, kind, at, title: optionalDiscovery(roll(amount, 'shared-item')).title };
-      case 'renown':
-        return { id, kind, at, renown: amount };
-    }
-  });
+  const entries = rows
+    .slice(0, pageSize)
+    .map(({ id, kind, at, key, amount, content_version }): GuildActivity => {
+      switch (kind) {
+        case 'expedition':
+          return { id, kind, at, title: partyMission(key, content_version)!.title, renown: amount };
+        case 'clue':
+          return { id, kind, at, title: discoveries.get(key)!.title };
+        case 'discovery':
+          return { id, kind, at, title: optionalDiscovery(roll(amount, 'shared-item')).title };
+        case 'renown':
+          return { id, kind, at, renown: amount };
+      }
+    });
   const last = entries.at(-1);
   return {
     entries,

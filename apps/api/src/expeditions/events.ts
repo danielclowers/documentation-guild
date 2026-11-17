@@ -5,7 +5,7 @@ import {
   challengeChance,
   challengeDiscoveryChance,
   expeditionEvents,
-  missions,
+  partyMission,
   modifiers,
   optionalDiscovery,
   roll,
@@ -13,9 +13,9 @@ import {
 import { findParty } from './parties';
 
 export const eventEffects = {
-  reliable_bonus: 'Safer approach · +10 to success chance',
+  reliable_bonus: 'Safer approach: +10 percentage points to the success chance.',
   discovery_chance: 'Chance of a personal discovery',
-  guild_renown: '+5 renown on success',
+  guild_renown: '+5 guild renown if successful.',
 };
 
 export async function resolveEvent(
@@ -35,7 +35,7 @@ export async function resolveEvent(
     party.ends_at === null
   )
     return false;
-  const mission = missions.get(party.mission);
+  const mission = partyMission(party.mission, party.content_version);
   const member = await db
     .prepare(
       `SELECT e.character_id, e.role, e.approach, e.snapshot
@@ -52,6 +52,7 @@ export async function resolveEvent(
     party.started_at,
     party.ends_at,
     party.modifier,
+    party.content_version,
   )[slot];
   const option = event?.options.find((item) => item.id === optionId);
   if (!event || !option || now < event.availableAt || now >= event.expiresAt) return false;

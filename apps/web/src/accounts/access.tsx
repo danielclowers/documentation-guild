@@ -89,10 +89,10 @@ function SignInForm({ apiUrl, invitation, recoveryComplete }: AccessProps) {
       }
       const { error: signInError } = await signIn.password({ identifier: username.data, password });
       if (signInError) {
-        setError('That username and password could not be used to sign in.');
+        setError("Couldn't sign in with that username and password. Check both and try again.");
       } else if (signIn.status === 'complete') {
         const { error: finalizeError } = await signIn.finalize();
-        if (finalizeError) setError('Clerk could not finish signing in. Try again.');
+        if (finalizeError) setError("Couldn't finish signing in. Try again.");
       } else {
         setError('This account requires an additional sign-in step. Contact a guild admin.');
       }

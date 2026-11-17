@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest';
+import { businessEditorial, editorialVersion } from '../../packages/content/src';
 import { caseMetadata, casePuzzle } from '../../apps/api/src/business/cases';
 import { newCaseDefinitions } from '../../apps/api/src/business/new-cases';
 import { nextCase } from '../../apps/api/src/business/selection';
@@ -32,10 +33,12 @@ function possible(view: BusinessPuzzle): BusinessAnswer[] {
 
 it('provides a unique solvable answer for each generated puzzle and three valid paths for each tradeoff', () => {
   expect(newCaseDefinitions.size + 1).toBe(26);
+  expect(Object.keys(businessEditorial)).toEqual(['pages_in_order', ...newCaseDefinitions.keys()]);
   for (const key of newCaseDefinitions.keys()) {
     const seen = new Set<string>();
-    for (const seed of [0, 42, 345619, 2452927471, 4294967295]) {
-      const { view, solve, outcome } = casePuzzle({
+    const seeds = [0, 42, 345619, 2452927471, 4294967295];
+    for (const seed of seeds) {
+      const instance = {
         id: 'known',
         character_id: 'member',
         position: 1,
@@ -44,11 +47,32 @@ it('provides a unique solvable answer for each generated puzzle and three valid 
         attempts: 0,
         retry_at: 0,
         completed_at: null,
+        content_version: 1,
+      };
+      const legacy = casePuzzle(instance);
+      const { view, solve, outcome } = casePuzzle({
+        ...instance,
+        content_version: editorialVersion,
       });
       const answers = possible(view);
       const valid = answers.filter(solve);
       expect(valid, key + ' ' + seed).toHaveLength(view.type === 'choice' ? 3 : 1);
+      expect(valid).toEqual(possible(legacy.view).filter(legacy.solve));
+      expect(view.title).toBe(businessEditorial[key]!.title);
+      expect(JSON.stringify(view)).not.toMatch(/<[a-z]+>/);
+      expect(outcome()).not.toMatch(/<[a-z]+>/);
+      if (view.type === 'matching') expect(new Set(view.tiles).size).toBe(6);
+      if (view.type === 'deduction') {
+        if (legacy.view.type !== 'deduction') throw new Error('Changed deduction type');
+        expect(view.options).toEqual(legacy.view.options);
+        if (newCaseDefinitions.get(key)?.family === 'patterns')
+          expect(view.clues?.slice(1)).toEqual(legacy.view.clues?.slice(1));
+      }
       if (view.type === 'choice') {
+        if (legacy.view.type !== 'choice') throw new Error('Changed choice type');
+        expect(view.options.map(({ id, effect }) => ({ id, effect }))).toEqual(
+          legacy.view.options.map(({ id, effect }) => ({ id, effect })),
+        );
         expect(new Set(view.options.map(({ effect }) => effect)).size).toBe(3);
         expect(new Set(view.options.map(({ id }) => outcome(id))).size).toBe(3);
       }
@@ -56,6 +80,34 @@ it('provides a unique solvable answer for each generated puzzle and three valid 
     }
     expect(seen.size, key).toBeGreaterThan(1);
   }
+});
+
+it('keeps the numeric puzzle and only changes the new instance', () => {
+  const row = {
+    id: 'intro',
+    character_id: 'player',
+    position: 0,
+    seed: 42,
+    template_key: 'pages_in_order',
+    attempts: 0,
+    retry_at: 0,
+    completed_at: null,
+    content_version: 1,
+  };
+  const legacy = casePuzzle(row);
+  const revised = casePuzzle({ ...row, content_version: editorialVersion });
+  expect(revised.view).toMatchObject({
+    prompt: businessEditorial.pages_in_order!.prompt,
+    tiles: [3, 1, 4, 2],
+  });
+  expect(possible(revised.view).filter(revised.solve)).toEqual([
+    { type: 'sequence', tiles: [1, 2, 3, 4] },
+  ]);
+  expect(revised.outcome()).toBe(
+    'The pages are back in order. The apprentice can finish the binding.',
+  );
+  expect(legacy.outcome()).toBe('You restored the pages to their proper order.');
+  expect(legacy.view.prompt).toBe('Arrange the numbered pages from lowest to highest.');
 });
 
 it('fills three varied slots and leaves room for a quick case and occasional advanced cases', () => {

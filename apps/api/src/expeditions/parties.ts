@@ -1,3 +1,4 @@
+import { editorialVersion } from '@guild/content';
 import type { D1Database } from '@cloudflare/workers-types';
 import {
   characterXpForLevel,
@@ -7,12 +8,13 @@ import {
   expeditionRewards,
 } from '@guild/shared';
 import type { ExpeditionState, Skill } from '@guild/shared';
-import { missions, modifiers } from './content';
+import { missions, modifiers, partyMission } from './content';
 import { chapterOneComplete } from '../story/chronicle';
 
 export interface PartyRow {
   id: string;
   mission: string;
+  content_version: number;
   chapter: string;
   modifier: string | null;
   leader_id: string;
@@ -54,8 +56,8 @@ export async function createParty(
   const [created] = await db.batch([
     db
       .prepare(
-        `INSERT INTO expedition_parties (id, mission, chapter, leader_id, state, seed, created_at, leader_since, scheduled_at, modifier)
-      SELECT ?, ?, ?, m.id, 'recruiting', ?, ?, ?, ?, ? FROM members m JOIN characters c ON c.member_id = m.id
+        `INSERT INTO expedition_parties (id, mission, chapter, leader_id, state, seed, created_at, leader_since, scheduled_at, modifier, content_version)
+      SELECT ?, ?, ?, m.id, 'recruiting', ?, ?, ?, ?, ?, ${editorialVersion} FROM members m JOIN characters c ON c.member_id = m.id
       WHERE m.id = ? AND m.status = 'active'
       AND NOT EXISTS (SELECT 1 FROM expedition_members WHERE member_id = m.id AND released_at IS NULL)`,
       )
@@ -89,7 +91,12 @@ export async function joinParty(
   now: number,
 ) {
   const party = await findParty(db, id);
-  if (!party || !missions.get(party.mission)?.approaches.some((item) => item.key === approach))
+  if (
+    !party ||
+    !partyMission(party.mission, party.content_version)?.approaches.some(
+      (item) => item.key === approach,
+    )
+  )
     return false;
   const joined = await db
     .prepare(
@@ -118,7 +125,7 @@ export async function depart(
   manualLeader?: string,
   beforeDeparture?: BeforeDeparture,
 ) {
-  const mission = missions.get(party.mission);
+  const mission = partyMission(party.mission, party.content_version);
   if (!mission) throw new Error('Unknown expedition mission');
   const minimumXp =
     mission.tier === 'advanced' ? characterXpForLevel(mission.recommended_level) : 0;
@@ -190,7 +197,7 @@ export async function depart(
 }
 
 async function complete(db: D1Database, party: PartyRow, now: number) {
-  const mission = missions.get(party.mission);
+  const mission = partyMission(party.mission, party.content_version);
   if (!mission) throw new Error('Unknown expedition mission');
   const reward = expeditionRewards[mission.tier];
   const marker = crypto.randomUUID();

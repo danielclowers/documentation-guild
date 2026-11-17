@@ -118,6 +118,7 @@ beforeAll(async () => {
     '0008_expeditions.sql',
     '0009_guild_activity.sql',
     '0010_player_guidance.sql',
+    '0011_editorial_versions.sql',
   ]) {
     const sql = await readFile(
       new URL(`../../apps/api/migrations/${migration}`, import.meta.url),
@@ -549,12 +550,23 @@ it('preserves old puzzles and applies the same preview, payout, and rolling allo
   const [first, other] = await Promise.all([board(), board()]);
   expect(first).toEqual(other);
   expect(first.cases).toHaveLength(3);
+  expect(
+    (
+      await db
+        .prepare(
+          'SELECT content_version FROM business_cases WHERE character_id = ? ORDER BY position',
+        )
+        .bind(character)
+        .all<{ content_version: number }>()
+    ).results.map(({ content_version }) => content_version),
+  ).toEqual([1, 1, 2]);
   expect(first.allowance).toEqual({ limit: 8, remaining: 8, nextAt: null });
   expect(JSON.stringify(first)).not.toMatch(/template_key|seed|solution/);
   const legacy = first.cases.find((item) => item.id === id)!;
   expect(legacy).toMatchObject({
     type: 'sequence',
     attempts: 2,
+    prompt: 'Arrange the numbered pages from lowest to highest.',
     preview: { xp: 20, skillXp: 10, gold: 14 },
   });
   if (legacy.type !== 'sequence') throw Error('Expected the retained puzzle');
@@ -584,6 +596,7 @@ it('preserves old puzzles and applies the same preview, payout, and rolling allo
       xp: 15,
       skillXp: 7,
       gold: 11,
+      outcome: 'You restored the pages to their proper order.',
       full: true,
       discovery: { rarity: 'common', known: false },
     },
@@ -602,7 +615,11 @@ it('preserves old puzzles and applies the same preview, payout, and rolling allo
   expect(
     await (await send(firstChoice, { type: 'choice', option: effectId('renown_bonus') })).json(),
   ).toMatchObject({
-    reward: { renown: 5, discovery: { key: 'unending_footnote', known: true } },
+    reward: {
+      renown: 5,
+      outcome: 'The reference copy went beside the guild door.',
+      discovery: { key: 'unending_footnote', known: true },
+    },
   });
   expect(
     await db
@@ -658,7 +675,15 @@ it('preserves old puzzles and applies the same preview, payout, and rolling allo
   expect(
     await submitBusinessCase(db, member, reduced, { type: 'choice', option: 2 }, at + 9999),
   ).toMatchObject({
-    reward: { xp: 5, skillXp: 0, gold: 2, renown: 0, full: false, discovery: null },
+    reward: {
+      xp: 5,
+      skillXp: 0,
+      gold: 2,
+      renown: 0,
+      full: false,
+      discovery: null,
+      outcome: 'You filed the routine report.',
+    },
   });
   expect((await businessBoard(db, member, at + 10_000))?.allowance.remaining).toBe(1);
   await db.prepare('UPDATE guilds SET renown = 0').run();

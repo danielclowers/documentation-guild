@@ -51,7 +51,9 @@ export function HallSettings({
           <option key={station}>{station}</option>
         ))}
       </select>
-      <p>Choose where your character stands. Your standing order keeps its current assignment.</p>
+      <p>
+        Choose where your character stands. This changes their location, not their standing order.
+      </p>
       {error && <p role="alert">{error}</p>}
       <div className="game-checks">
         <label>

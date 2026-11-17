@@ -100,8 +100,8 @@ export function Journal({
               <div className="help-heading">
                 <h3>Your discoveries</h3>
                 <HelpTip topic="your discoveries">
-                  Find personal discoveries through Guild Business and expedition challenges.
-                  Chronicle clues are shared by the whole guild.
+                  You can find personal discoveries through Guild Business and optional expedition
+                  challenges. Chronicle clues belong to the whole guild.
                 </HelpTip>
               </div>
               {journal.discoveries.length ? (
@@ -111,7 +111,9 @@ export function Journal({
                   ))}
                 </ul>
               ) : (
-                <p>Your discoveries will be recorded here.</p>
+                <p>
+                  You haven't made any discoveries yet. They will appear here when you find them.
+                </p>
               )}
               <details className="story-entry">
                 <summary>How discoveries work</summary>
@@ -145,8 +147,9 @@ export function Journal({
               <div className="help-heading">
                 <h3>The Unwritten Chronicle</h3>
                 <HelpTip topic="Chronicle progress">
-                  Everyone shares these chapter goals. Expeditions earn chapter renown and
-                  guaranteed story clues. Random personal discoveries stay in your journal.
+                  These goals are shared by the whole guild. Expeditions earn chapter renown and
+                  guaranteed story clues. Personal discoveries go in your journal and don't count
+                  toward those objectives.
                 </HelpTip>
               </div>
               {journal.chronicle.map((chapter) => (
@@ -185,11 +188,11 @@ export function Journal({
 function activityText(entry: GuildActivity) {
   switch (entry.kind) {
     case 'expedition':
-      return `A party returned from ${entry.title} with ${entry.renown} baseline renown.`;
+      return `A party returned from ${entry.title}, earning ${entry.renown} baseline guild renown.`;
     case 'discovery':
-      return `A party shared a discovery, ${entry.title}.`;
+      return `A party made a shared discovery: ${entry.title}.`;
     case 'clue':
-      return `The Chronicle gained a clue, ${entry.title}.`;
+      return `New Chronicle clue: ${entry.title}.`;
     case 'renown':
       return `The guild reached ${entry.renown.toLocaleString()} renown.`;
   }

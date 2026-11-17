@@ -11,7 +11,7 @@
 | 6. Story, content and polish | Two launch chapters, seven expeditions, five optional modifiers, a personal journal with mystery chains, a shared Chronicle and activity feed, and a return summary are playable. Hall motion and wave controls are available. The hall has no audio assets. |
 | 7. Deployment and operations | GitHub Pages is connected to a Cloudflare preview Worker and D1 database. |
 
-The attached workspace serves as the project directory. `docs/spec` contains the unchanged handoff and a single copy of the JSON catalog. The checked-in catalog names use `advanced` for harder content and `normal` for standard expeditions.
+The attached workspace serves as the project directory. `docs/spec` contains the original handoff, the launch catalog, and the approved editorial copy. The checked-in catalog names use `advanced` for harder content and `normal` for standard expeditions.
 
 The GitHub CLI and SSH both verified `danielclowers`. The project repository is `danielclowers/documentation-guild`. The hosted preview uses the Clerk development instance. Production identity and deployment configuration are still pending.
 
@@ -26,6 +26,8 @@ Playwright opens the signed-in game with fixture API and WebSocket responses. It
 Guild Business keeps three cases available. Replacements favor unseen or less recent templates, different skills and challenge families, and at least one quick case. Advanced cases can appear from Level 3. The server uses the same reward calculation for previews and full payouts. Finds have written rarity labels, link to their journal entry, and distinguish new and known results.
 
 The seven-step guild tour is optional and includes shortcuts to the actual hall menus. Skip or finish it to save that decision on the character. Earlier players and returning players can replay it in Settings & Help. Expeditions and standing orders continue using the existing rules while the guide is open.
+
+The editorial pass updates the narrative and help text across Guild Business, expeditions, the Journal, the Chronicle, and the seven-step tour. New cases and parties use the revised writing. Versioned definitions keep the original puzzles and expedition narratives available for saved records. The [editorial checklist](docs/CONTENT-EDITORIAL-VERIFICATION.md) records coverage and verification.
 
 ## Local verification
 

@@ -51,8 +51,8 @@ function App() {
           {!inside && <h1 id="title">The Documentation Guild</h1>}
           {!inside && (
             <p className="premise">
-              Someone has been removing pages from the Royal Chronicle. The guild has a few
-              questions.
+              From village disputes to forgotten ruins, there is always work for the guild. Now
+              pages are vanishing from the Royal Chronicle, and people are forgetting what happened.
             </p>
           )}
           <div className={inside ? 'game-access' : 'access'}>

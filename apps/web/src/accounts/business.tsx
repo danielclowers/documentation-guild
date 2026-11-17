@@ -15,9 +15,10 @@ import { CaseComplete, RewardChips } from '../game/rewards';
 import { accountError, type AccountApi } from './api';
 
 const choiceLabels: Record<BusinessChoiceKind, string> = {
-  guaranteed_gold: 'Personal gold for training and specialization.',
-  discovery_roll: 'A better chance to find a journal entry.',
-  renown_bonus: 'Shared renown for the guild. Chapter unlocks still require expeditions.',
+  guaranteed_gold: 'Gold you can spend on training or changing specialization.',
+  discovery_roll: 'Increases your chances of finding an entry for your journal.',
+  renown_bonus:
+    "Increases the guild's shared renown. Chronicle objectives still require expeditions.",
 };
 
 const difficulties = { intro: 'Introductory', normal: 'Standard', advanced: 'Advanced' };
@@ -26,11 +27,11 @@ function DiscoveryOdds({ preview }: { preview: BusinessPreview }) {
   if (!preview.discoveryChance) return null;
   return (
     <small>
-      {preview.discoveryChance}% discovery roll
+      {preview.discoveryChance}% chance of a discovery
       {preview.newDiscoveryChance < preview.discoveryChance &&
         (preview.newDiscoveryChance > 0
-          ? ` · about ${preview.newDiscoveryChance.toFixed(1)}% chance of a new entry`
-          : ' · all entries in this pool are known')}
+          ? ` · about ${preview.newDiscoveryChance.toFixed(1)}% chance of a new journal entry`
+          : " · You've found every entry in this discovery pool.")}
     </small>
   );
 }
@@ -53,17 +54,17 @@ function RewardPreview({ item }: { item: BusinessCase }) {
           <DiscoveryOdds preview={preview} />
           {choices.length > 0 && (
             <small>
-              Choose one bonus · +{extraGold} gold, +{renown} renown
+              Choose one bonus: +{extraGold} gold, +{renown} guild renown
               {preview.newDiscoveryChance > 0
                 ? `, or a ${highestChance}% discovery roll.`
-                : ', or revisit a known discovery.'}
+                : ', or a chance to revisit a known discovery.'}
             </small>
           )}
         </>
       )}
       {preview.retryPenalty && (
         <small>
-          After three wrong attempts, this case pays 75% of its usual XP, skill XP, and gold,
+          After three incorrect attempts, this case awards 75% of its usual XP, skill XP and gold,
           rounded down.
         </small>
       )}
@@ -76,7 +77,7 @@ function Allowance({ value }: { value: BusinessAllowance }) {
     <section className="business-allowance" aria-label="Full-reward allowance">
       <div>
         <strong>
-          {value.remaining}/{value.limit} full rewards remaining
+          {value.remaining}/{value.limit} full-reward cases remaining
         </strong>
         <span>{value.remaining ? 'Full rewards' : 'Reduced rewards'}</span>
       </div>
@@ -88,12 +89,12 @@ function Allowance({ value }: { value: BusinessAllowance }) {
       />
       <p>
         {value.remaining
-          ? 'Each full payout frees its slot 24 hours later.'
-          : 'Keep taking cases for 5 character XP and 2 gold each. Skill XP, renown, and discoveries resume with full rewards.'}
+          ? 'Each full-reward completion restores one slot 24 hours later.'
+          : 'You can still earn 5 character XP and 2 gold per case. Skill XP, renown and discovery rolls are only available with full rewards.'}
       </p>
       {value.nextAt && (
         <small>
-          Next slot returns{' '}
+          Next full-reward slot:{' '}
           <time dateTime={new Date(value.nextAt).toISOString()}>
             {new Date(value.nextAt).toLocaleString([], {
               weekday: 'short',
@@ -177,7 +178,12 @@ function CaseForm({
         </ul>
       )}
       <RewardPreview item={item} />
-      {routine && <p>File a routine report. The three special outcomes use a full-reward slot.</p>}
+      {routine && (
+        <p>
+          This case is eligible for reduced rewards only. File a routine report to receive the
+          available reward.
+        </p>
+      )}
       {item.type === 'sequence' && (
         <ol className="business-sequence">
           {sequence.map((tile, index) => (
@@ -260,7 +266,11 @@ function CaseForm({
       )}
       {item.attempts > 0 && (
         <p role="status">
-          {locked ? 'Take another look before retrying.' : 'That answer didn’t fit. Try again.'}
+          {now < item.retryAt
+            ? 'Take a moment before trying again.'
+            : item.type === 'matching' || item.type === 'sequence'
+              ? 'Not quite. Check your arrangement and try again.'
+              : "That answer doesn't fit the clues. Try again."}
         </p>
       )}
       <button
@@ -372,8 +382,8 @@ export function GuildBusiness({
       <div className="help-heading">
         <span>Personal cases</span>
         <HelpTip topic="Guild Business">
-          Cases refill as you finish them. The first eight payouts in a rolling 24-hour window pay
-          full rewards.
+          Three personal cases are available at a time. Finish a case to receive another. Eight
+          full-reward completions are available in a rolling 24-hour window.
         </HelpTip>
       </div>
       {allowance && <Allowance value={allowance} />}

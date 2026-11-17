@@ -606,7 +606,7 @@ it('lets an Investigator retry a failed deduction once without rerolling its see
   const start = finish - 10 * minute;
   let seed = 0;
   while (
-    !expeditionEvents(mission, seed, 'investigator', start, finish)[0]?.deductionClue ||
+    !expeditionEvents(mission, seed, 'investigator', start, finish, null, 2)[0]?.deductionClue ||
     roll(seed, 'investigator:0:check') % 100 < 60 ||
     roll(seed, 'investigator:0:check') % 100 >= 70
   )
@@ -718,3 +718,60 @@ it('completes both Chronicle chapters with two players and no random discoveries
   expect(recap.challenges).toBeGreaterThan(18);
   expect(recap.discoveries).toBe(0);
 }, 30_000);
+
+it('serves the original expedition report and resolved option for a legacy party', async () => {
+  const { expeditionEvents, partyMission, roll } =
+    await import('../../apps/api/src/expeditions/content');
+  const db = await expeditionMembers('archivelead', 'archivepeer');
+  const member = 'archivelead';
+  const finished = Date.now() - minute;
+  const started = finished - 20 * minute;
+  const seedMission = partyMission('forgotten_archives', 1)!;
+  let seed = 0;
+  while (
+    expeditionEvents(seedMission, seed, member, started, finished, null, 1)[0]?.key !==
+      'sealed_chamber' ||
+    roll(seed, member + ':0:check') % 100 >= 30
+  )
+    seed++;
+  for (const version of [1, 2]) {
+    const id = await createExpedition(member, null, seedMission.key);
+    expect(
+      await db
+        .prepare('SELECT content_version FROM expedition_parties WHERE id = ?')
+        .bind(id)
+        .first('content_version'),
+    ).toBe(2);
+    await db
+      .prepare('UPDATE expedition_parties SET content_version = ?, seed = ? WHERE id = ?')
+      .bind(version, seed, id)
+      .run();
+    expect((await expeditionAction('archivepeer', id, 'join', expeditionRole)).status).toBe(200);
+    expect((await expeditionAction(member, id, 'start')).status).toBe(200);
+    await db
+      .prepare('UPDATE expedition_parties SET started_at = ?, ends_at = ? WHERE id = ?')
+      .bind(started, finished, id)
+      .run();
+    await runExpeditionCron();
+    const mission = partyMission(seedMission.key, version)!;
+    const encounter = expeditionEvents(mission, seed, member, started, finished, null, version)[0]!;
+    const option = encounter.options[0]!;
+    expect((await boardParty(member, id))?.events[0]).toMatchObject({
+      title: encounter.title,
+      options: [{ id: option.id, label: option.label }, expect.anything(), expect.anything()],
+    });
+    expect(
+      (await expeditionAction(member, id, 'event', { slot: 0, option: option.id })).status,
+    ).toBe(200);
+    expect(await boardParty(member, id)).toMatchObject({
+      report: { text: mission.story_beats.return, reward: { xp: 110, gold: 60 } },
+      events: expect.arrayContaining([
+        expect.objectContaining({
+          slot: 0,
+          title: encounter.title,
+          result: expect.objectContaining({ success: true, text: option.consequence }),
+        }),
+      ]),
+    });
+  }
+});

@@ -1,3 +1,4 @@
+import { editorialVersion } from '@guild/content';
 import type { D1Database } from '@cloudflare/workers-types';
 import { characterLevel } from '@guild/shared';
 import type {
@@ -76,8 +77,8 @@ export async function businessBoard(
         active.push(template);
         return db
           .prepare(
-            `INSERT OR IGNORE INTO business_cases (id, character_id, position, template_key, seed)
-        SELECT ?, c.id, ?, ?, ? FROM characters c JOIN members m ON m.id = c.member_id
+            `INSERT OR IGNORE INTO business_cases (id, character_id, position, template_key, seed, content_version)
+        SELECT ?, c.id, ?, ?, ?, ${editorialVersion} FROM characters c JOIN members m ON m.id = c.member_id
         WHERE c.id = ? AND m.status = 'active'
         AND (SELECT COALESCE(MAX(position), -1) FROM business_cases WHERE character_id = c.id) = ?
         AND (SELECT COUNT(*) FROM business_cases WHERE character_id = c.id AND completed_at IS NULL) < ?
@@ -154,15 +155,16 @@ async function resultFor(db: D1Database, row: CaseInstance): Promise<BusinessSub
   if (!reward) throw new Error('Completed case missing its reward');
   const { chosenOption, discoveryKey, newDiscovery, ...payout } = reward;
   const full = payout.skillXp > 0;
+  const { view, outcome } = casePuzzle(row);
   return {
     status: 'completed',
     reward: {
       ...payout,
       full,
       outcome:
-        !full && casePuzzle(row).view.type === 'choice'
-          ? 'You filed the case as a routine report.'
-          : casePuzzle(row).outcome(chosenOption ?? undefined),
+        !full && view.type === 'choice'
+          ? 'You filed the routine report.'
+          : outcome(chosenOption ?? undefined),
       discovery: discoveryFind(discoveryKey, !newDiscovery),
     },
   };

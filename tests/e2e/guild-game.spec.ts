@@ -48,11 +48,12 @@ async function enter(page: Page, tutorialStatus: 'pending' | null = null, reduce
   const pages = {
     id: 'intro',
     type: 'sequence',
-    title: 'Pages Out of Order',
+    title: "The Apprentice's First Mistake",
     difficulty: 'intro',
     skill: 'Scribing',
-    prompt: 'Arrange the pages from first to last.',
-    tiles: [2, 1, 3, 4],
+    prompt:
+      'An apprentice dropped four pages on the way to the bindery. Put them back in numerical order.',
+    tiles: [3, 1, 4, 2],
     attempts: 0,
     retryAt: 0,
     preview: reward,
@@ -63,13 +64,25 @@ async function enter(page: Page, tutorialStatus: 'pending' | null = null, reduce
     title: 'The Market Map',
     difficulty: 'normal',
     skill: 'Scribing',
-    prompt: 'Choose who gets the map.',
+    prompt: 'An old market map is on loan for only an hour. There is time to make one useful copy.',
     attempts: 0,
     retryAt: 0,
     options: [
-      { id: 0, label: 'Sell the map', effect: 'guaranteed_gold' },
-      { id: 1, label: 'Trace the runes', effect: 'discovery_roll' },
-      { id: 2, label: 'Copy it for the guild', effect: 'renown_bonus' },
+      {
+        id: 0,
+        label: 'Copy the market stalls for a merchant who has offered payment.',
+        effect: 'guaranteed_gold',
+      },
+      {
+        id: 1,
+        label: 'Copy the faint markings that appear beneath the newer roads.',
+        effect: 'discovery_roll',
+      },
+      {
+        id: 2,
+        label: 'Copy the entrances and public roads for anyone visiting the market.',
+        effect: 'renown_bonus',
+      },
     ],
     preview: reduced ? low : reward,
     choicePreviews: reduced
@@ -162,19 +175,21 @@ async function enter(page: Page, tutorialStatus: 'pending' | null = null, reduce
           cases: reduced || solved ? [routeOptions] : [pages, routeOptions],
         });
       case '/business/intro/submit':
-        if (request.postDataJSON().tiles.join(',') !== '1,2,3,4')
-          return json({ status: 'retry', attempts: 1, retryAt: 0 });
+        if (request.postDataJSON().tiles.join(',') !== '1,2,3,4') {
+          pages.attempts++;
+          return json({ status: 'retry', attempts: pages.attempts, retryAt: 0 });
+        }
         solved = true;
         return json({
           status: 'completed',
           reward: {
             ...reward,
             skill: 'Scribing',
-            outcome: 'The pages are restored.',
+            outcome: 'The pages are back in order. The apprentice can finish the binding.',
             discovery: {
               key: 'echoing_index',
               title: 'The Echoing Index',
-              text: 'A shelf disappears when named aloud.',
+              text: 'An old library catalog lists a reading room that does not exist on the present floor plan. Several of its shelf numbers are still used elsewhere in the building.',
               rarity: 'uncommon',
               known: false,
             },
@@ -186,19 +201,56 @@ async function enter(page: Page, tutorialStatus: 'pending' | null = null, reduce
           reward: {
             ...low,
             skill: 'Scribing',
-            outcome: 'You filed a routine report.',
+            outcome: 'You filed the routine report.',
             discovery: null,
           },
         });
       case '/expeditions':
-        return json({ parties: [], missions: [], modifiers: [], invitees: [], chronicle: [] });
+        return json({
+          parties: [],
+          modifiers: [],
+          invitees: [],
+          chronicle: [],
+          missions: [
+            {
+              key: 'missing_pages',
+              title: 'The Missing Pages',
+              summary:
+                'A village librarian found blank spaces in the Royal Chronicle. The page numbers are intact, but several events appear to have been erased.',
+              tier: 'tutorial',
+              minutes: 10,
+              recommendedLevel: 1,
+              unlocked: true,
+              approaches: [
+                {
+                  key: 'careful',
+                  label: 'Careful investigation',
+                  description:
+                    'Take fewer risks and improve the odds of successful optional challenges.',
+                },
+                {
+                  key: 'curious',
+                  label: 'Follow unusual leads',
+                  description:
+                    'Optional challenges are harder, but discovery choices have a better chance of finding something.',
+                },
+                {
+                  key: 'supportive',
+                  label: 'Document for the guild',
+                  description:
+                    "Focus on a useful record of the expedition and support the party's work.",
+                },
+              ],
+            },
+          ],
+        });
       case '/me/journal':
         return json({
           discoveries: [
             {
               key: 'missing_chapter',
               title: 'The Missing Chapter',
-              text: 'An entire chapter is absent, but the numbering never skipped a beat.',
+              text: 'An early copy of the Royal Chronicle records a royal procession absent from later editions. The page numbering in the later copies is continuous, even though the account is gone.',
               rarity: 'common',
               source: 'chronicle',
               discoveredAt: now,
@@ -206,7 +258,7 @@ async function enter(page: Page, tutorialStatus: 'pending' | null = null, reduce
             {
               key: 'echoing_index',
               title: 'The Echoing Index',
-              text: 'A cross-reference points to a shelf that disappears when named aloud.',
+              text: 'An old library catalog lists a reading room that does not exist on the present floor plan. Several of its shelf numbers are still used elsewhere in the building.',
               rarity: 'uncommon',
               source: 'case',
               discoveredAt: now,
@@ -243,33 +295,52 @@ test('introduces the hall, guides a first case, and can be finished or replayed'
 }, info) => {
   const { calls, live } = await enter(page, 'pending');
   const guide = page.locator('.guild-guide');
+  const sizes =
+    info.project.name === 'desktop'
+      ? ([
+          [1440, 900],
+          [1920, 1080],
+          [2560, 1440],
+        ] as const)
+      : [];
+  async function checkLayout(element: import('@playwright/test').Locator, screen: string) {
+    for (const [width, height] of sizes) {
+      await page.setViewportSize({ width, height });
+      await expect(element).toBeVisible();
+      expect(await element.evaluate((el) => el.scrollWidth)).toBeLessThanOrEqual(
+        await element.evaluate((el) => el.clientWidth + 1),
+      );
+      if (process.env.GUILD_UI_SCREENSHOTS)
+        await page.screenshot({ path: info.outputPath(`${screen}-${width}x${height}.png`) });
+    }
+  }
   await expect(guide.getByRole('heading', { name: 'Welcome to the guild' })).toBeVisible();
   await guide.getByRole('button', { name: 'Next' }).click();
   await guide.getByRole('button', { name: 'Back' }).click();
   await expect(guide.getByRole('heading', { name: 'Welcome to the guild' })).toBeVisible();
   for (let i = 0; i < 3; i++) await guide.getByRole('button', { name: 'Next' }).click();
+  await expect(guide.getByRole('heading', { name: 'Take on a case' })).toBeVisible();
+  await checkLayout(guide, 'guild-tour');
   await guide.getByRole('button', { name: 'Open Guild Business' }).click();
   const menu = page.getByRole('dialog', { name: 'Guild Business' });
-  await expect(menu.getByText('8/8 full rewards remaining')).toBeVisible();
-  await menu.getByRole('button', { name: 'Pages Out of Order' }).click();
+  await expect(menu.getByText('8/8 full-reward cases remaining')).toBeVisible();
+  await menu.getByRole('button', { name: "The Apprentice's First Mistake" }).click();
   await expect(menu.getByText('10 Scribing XP')).toBeVisible();
+  await menu.getByRole('button', { name: 'Submit answer' }).click();
+  await expect(menu.getByText('Not quite. Check your arrangement and try again.')).toBeVisible();
   await menu.getByRole('button', { name: 'Move 1 earlier' }).click();
+  await menu.getByRole('button', { name: 'Move 2 earlier' }).click();
+  await menu.getByRole('button', { name: 'Move 2 earlier' }).click();
   await menu.getByRole('button', { name: 'Submit answer' }).click();
   await expect(menu.getByRole('heading', { name: 'Case complete!' })).toBeVisible();
+  await expect(
+    menu.getByText('The pages are back in order. The apprentice can finish the binding.'),
+  ).toBeVisible();
   const notice = menu.getByRole('complementary', { name: 'New discovery' });
   await expect(notice.getByText('uncommon', { exact: true })).toBeVisible();
   await expect(notice.getByText('Added to your journal.')).toBeVisible();
-  await expect(menu.getByText('7/8 full rewards remaining')).toBeVisible();
-  if (process.env.GUILD_UI_SCREENSHOTS && info.project.name === 'desktop') {
-    for (const [width, height] of [
-      [1440, 900],
-      [1920, 1080],
-      [2560, 1440],
-    ] as const) {
-      await page.setViewportSize({ width, height });
-      await page.screenshot({ path: info.outputPath(`case-complete-${width}x${height}.png`) });
-    }
-  }
+  await expect(menu.getByText('7/8 full-reward cases remaining')).toBeVisible();
+  await checkLayout(menu, 'case-complete');
   await notice.getByRole('button', { name: 'Read journal entry' }).click();
   await expect(page.locator('#journal-entry-echoing_index')).toBeFocused();
   for (let i = 0; i < 3; i++) await guide.getByRole('button', { name: 'Next' }).click();
@@ -294,13 +365,19 @@ test('lets a new player skip and explains reduced rewards without offering ident
   await expect.poll(() => calls.filter(({ path }) => path === '/me/tutorial').length).toBe(1);
   await page.getByRole('navigation').getByRole('button', { name: 'Guild Business' }).click();
   const menu = page.getByRole('dialog', { name: 'Guild Business' });
-  await expect(menu.getByText('0/8 full rewards remaining')).toBeVisible();
+  await expect(menu.getByText('0/8 full-reward cases remaining')).toBeVisible();
   await menu.getByRole('button', { name: 'The Market Map' }).click();
   await expect(menu.getByRole('radio')).toHaveCount(0);
+  await expect(
+    menu.getByText(
+      'This case is eligible for reduced rewards only. File a routine report to receive the available reward.',
+    ),
+  ).toBeVisible();
   await menu.getByRole('button', { name: 'File report' }).click();
+  await expect(menu.getByText('You filed the routine report.')).toBeVisible();
   await expect(menu.getByRole('heading', { name: 'Case complete!' })).toBeVisible();
   await expect(
-    menu.getByText('Reduced rewards · No skill XP, renown, or discovery roll.'),
+    menu.getByText('Reduced rewards: no skill XP, renown or discovery roll.'),
   ).toBeVisible();
   expect(live.sockets).toBe(1);
 });
@@ -404,6 +481,19 @@ test('keeps the game menus and the hall usable at workstation resolutions', asyn
     await menu.getByRole('button', { name: title, exact: true }).click();
     const dialog = page.getByRole('dialog', { name: title });
     await expect(dialog).toBeVisible();
+    if (title === 'Expedition Board') {
+      await dialog
+        .getByRole('combobox', { name: 'Plan an expedition' })
+        .selectOption('missing_pages');
+      const approach = dialog.getByRole('combobox', { name: 'Approach', exact: true });
+      await expect(approach).toHaveAccessibleDescription(
+        'Take fewer risks and improve the odds of successful optional challenges.',
+      );
+      await approach.selectOption('curious');
+      await expect(approach).toHaveAccessibleDescription(
+        'Optional challenges are harder, but discovery choices have a better chance of finding something.',
+      );
+    }
     if (title === 'Journal & Chronicle') {
       await expect(dialog.getByText('The Echoing Index', { exact: true })).toBeVisible();
       if (process.env.GUILD_UI_SCREENSHOTS)

@@ -48,13 +48,13 @@ export function StandingOrders({
         <h3 id="standing-order-title">Standing order</h3>
         <HelpTip topic="Standing orders">
           Choose an assignment and leave the hall open. Closing your last connected tab pauses the
-          cycle. You pick up where you left off when you return.
+          five-minute cycle. When you return, you pick up where you left off.
         </HelpTip>
       </div>
       <p>
         {order
           ? `Working on ${order.skill}`
-          : 'Choose a task for your character to work on automatically.'}
+          : "Choose what your character should work on while you're connected."}
       </p>
       <label htmlFor="order-skill">Assignment</label>
       <select
@@ -75,7 +75,8 @@ export function StandingOrders({
       </select>
       {rate && (
         <p>
-          Every 5 minutes, earn {rate.xp} XP, {rate.skillXp} skill XP, and {rate.gold} gold.
+          Every 5 connected minutes: {rate.xp} character XP, {rate.skillXp} skill XP, and{' '}
+          {rate.gold} gold.
         </p>
       )}
       <button
@@ -97,7 +98,7 @@ export function StandingOrders({
           XP, +{latestReward.gold} gold
         </p>
       )}
-      <p>Earn while connected to the hall, even when idle.</p>
+      <p>You earn rewards while connected even if you're working in another app.</p>
     </section>
   );
 }

@@ -1,7 +1,7 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { expeditionDay } from '@guild/shared';
 import type { GuildRecap } from '@guild/shared';
-import { expeditionEvents, missions, type ExpeditionSnapshot } from '../expeditions/content';
+import { expeditionEvents, partyMission, type ExpeditionSnapshot } from '../expeditions/content';
 
 export async function playerRecap(
   db: D1Database,
@@ -19,7 +19,7 @@ export async function playerRecap(
       .bind(member, since),
     db
       .prepare(
-        `SELECT p.id, p.mission, r.xp, r.gold FROM expedition_members e JOIN expedition_parties p ON p.id = e.party_id
+        `SELECT p.id, p.mission, p.content_version, r.xp, r.gold FROM expedition_members e JOIN expedition_parties p ON p.id = e.party_id
       JOIN reward_ledger r ON r.character_id = e.character_id AND r.source_type = 'expedition' AND r.source_id = p.id
       WHERE e.member_id = ? AND p.state = 'completed' AND e.released_at >= ? ORDER BY p.ends_at DESC LIMIT 10`,
       )
@@ -42,7 +42,7 @@ export async function playerRecap(
       .bind(member, since),
     db
       .prepare(
-        `SELECT p.id, p.mission, p.seed, p.started_at, p.ends_at, p.modifier, e.snapshot
+        `SELECT p.id, p.mission, p.seed, p.started_at, p.ends_at, p.modifier, p.content_version, e.snapshot
       FROM expedition_members e JOIN expedition_parties p ON p.id = e.party_id
       WHERE e.member_id = ? AND e.snapshot IS NOT NULL AND p.state IN ('running','completed') AND p.ends_at > ?`,
       )
@@ -57,6 +57,7 @@ export async function playerRecap(
   const roster = rosters!.results as {
     id: string;
     mission: string;
+    content_version: number;
     seed: number;
     started_at: number;
     ends_at: number;
@@ -74,12 +75,13 @@ export async function playerRecap(
     const snapshot = JSON.parse(party.snapshot) as ExpeditionSnapshot;
     const attempts = outcomes.filter((item) => item.party_id === party.id);
     for (const event of expeditionEvents(
-      missions.get(party.mission)!,
+      partyMission(party.mission, party.content_version)!,
       party.seed,
       member,
       party.started_at,
       party.ends_at,
       party.modifier,
+      party.content_version,
     )) {
       if (now < event.availableAt || now >= event.expiresAt) continue;
       const outcome = attempts.find((item) => item.slot === event.slot);
@@ -97,8 +99,19 @@ export async function playerRecap(
     checkedAt: now,
     standing: standing!.results[0] as GuildRecap['standing'],
     returned: (
-      returned!.results as { id: string; mission: string; xp: number; gold: number }[]
-    ).map(({ id, mission, xp, gold }) => ({ id, title: missions.get(mission)!.title, xp, gold })),
+      returned!.results as {
+        id: string;
+        mission: string;
+        content_version: number;
+        xp: number;
+        gold: number;
+      }[]
+    ).map(({ id, mission, content_version, xp, gold }) => ({
+      id,
+      title: partyMission(mission, content_version)!.title,
+      xp,
+      gold,
+    })),
     ...(counts!.results[0] as Pick<GuildRecap, 'discoveries' | 'invitations' | 'milestones'>),
     challenges,
   };
